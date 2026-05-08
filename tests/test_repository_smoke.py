@@ -122,8 +122,4 @@ async def test_smoke_delete_rolls_back(session: AsyncSession) -> None:
     await repo.delete_smoke_data(plant, user, species)
     fetched = await repo.get_plant(plant.id)
 
-<<<<<<< HEAD
     assert fetched is None
-=======
-    assert fetched is None
->>>>>>> 2cebda581a87780df48467f9d53672ac483ac83d
