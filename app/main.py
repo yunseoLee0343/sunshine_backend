@@ -1,10 +1,14 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from app.api.plants import router as plants_router
 from app.core.config import settings
 from app.db.health import check_db
 
 app = FastAPI(title=settings.APP_NAME)
+
+# Plant Onboarding API (TICKET-002)
+app.include_router(plants_router)
 
 
 @app.get("/healthz")

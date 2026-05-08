@@ -14,7 +14,6 @@ if not os.environ.get("DATABASE_URL"):
         allow_module_level=True,
     )
 
-import asyncio  # noqa: E402
 
 from alembic.config import Config  # noqa: E402
 from sqlalchemy import inspect  # noqa: E402
@@ -65,15 +64,14 @@ def test_alembic_upgrade_head() -> None:
 #     for table in REQUIRED_TABLES:
 #         assert table in existing, f"Table '{table}' missing after migration"
 
+
 @pytest.mark.asyncio
 async def test_required_tables_exist() -> None:
     """All 11 core tables must exist after migration."""
     # 별도의 내부 함수 없이 바로 비동기 로직 실행
     engine = create_async_engine(DATABASE_URL)
     async with engine.connect() as conn:
-        tables = await conn.run_sync(
-            lambda sync_conn: inspect(sync_conn).get_table_names()
-        )
+        tables = await conn.run_sync(lambda sync_conn: inspect(sync_conn).get_table_names())
     await engine.dispose()
     for table in REQUIRED_TABLES:
         assert table in tables, f"Table '{table}' missing"
