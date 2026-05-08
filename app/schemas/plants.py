@@ -5,21 +5,25 @@ import uuid
 from pydantic import BaseModel, Field, field_validator
 
 # ---------------------------------------------------------------------------
-# POST /plants/species-candidates
+# POST /plants/species-candidates  (TICKET-003 — classifier-port backed)
 # ---------------------------------------------------------------------------
 
 
 class SpeciesCandidatesRequest(BaseModel):
     user_id: uuid.UUID
     image_ref: str | None = None  # opaque string — never opened or classified
+    locale: str = "ko-KR"
+    top_k: int = 3
 
 
 class SpeciesCandidateItem(BaseModel):
-    species_profile_id: uuid.UUID
-    korean_name: str
+    species_profile_id: uuid.UUID | None = None
+    label_ko: str
+    label_en: str
     scientific_name: str | None
-    common_name: str | None
-    confidence_label: str = "mock_or_catalog_match"
+    confidence: float
+    confidence_label: str
+    source: str
 
 
 class SpeciesCandidatesResponse(BaseModel):

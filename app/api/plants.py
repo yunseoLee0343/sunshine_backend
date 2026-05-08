@@ -1,4 +1,4 @@
-"""Plants API router — TICKET-002 Plant Onboarding."""
+"""Plants API router — TICKET-002 + TICKET-003."""
 
 import uuid
 
@@ -12,13 +12,19 @@ from app.schemas.plants import (
     CreatePlantResponse,
     GetPlantResponse,
     ListPlantsResponse,
-    SpeciesCandidateItem,
     SpeciesCandidatesRequest,
     SpeciesCandidatesResponse,
 )
 from app.services.plant_onboarding import PlantOnboardingService
+from app.services.species_candidate_service import SpeciesCandidateService
+from app.vision.mock_species_classifier import MockSpeciesClassifier
+from app.vision.species_classifier import SpeciesClassifierPort
 
 router = APIRouter(prefix="/plants", tags=["plants"])
+
+# Lightweight, stateless mock — instantiated once at import time.
+# Real model loading is forbidden in this ticket.
+_mock_classifier = MockSpeciesClassifier()
 
 
 async def get_session():
@@ -27,8 +33,16 @@ async def get_session():
         yield session
 
 
+def get_species_classifier() -> SpeciesClassifierPort:
+    """FastAPI dependency: yields the configured species classifier port.
+
+    Override this in tests to inject a fake classifier.
+    """
+    return _mock_classifier
+
+
 # ---------------------------------------------------------------------------
-# POST /plants/species-candidates
+# POST /plants/species-candidates  (TICKET-003)
 # ---------------------------------------------------------------------------
 
 
@@ -36,25 +50,21 @@ async def get_session():
 async def species_candidates(
     req: SpeciesCandidatesRequest,
     session: AsyncSession = Depends(get_session),
+    classifier: SpeciesClassifierPort = Depends(get_species_classifier),
 ) -> SpeciesCandidatesResponse:
-    """Return DB-backed species candidates.
+    """Return species candidates produced by the classifier port.
 
-    image_ref is treated as an opaque string — never opened, classified,
-    or used for model inference.
+    image_ref is treated as an opaque string — never opened, fetched, or
+    decoded. Each candidate is optionally resolved to an existing row in
+    species_profiles; a missing match yields species_profile_id = null.
     """
     repo = SpeciesRepository(session)
-    rows = await repo.list_candidates(limit=20)
-    candidates = [
-        SpeciesCandidateItem(
-            species_profile_id=row.id,
-            korean_name=row.korean_name,
-            scientific_name=row.scientific_name,
-            common_name=row.common_name,
-            confidence_label="mock_or_catalog_match",
-        )
-        for row in rows
-    ]
-    return SpeciesCandidatesResponse(candidates=candidates)
+    svc = SpeciesCandidateService(classifier=classifier, species_repo=repo)
+    return await svc.list_candidates(
+        image_ref=req.image_ref,
+        locale=req.locale,
+        top_k=req.top_k,
+    )
 
 
 # ---------------------------------------------------------------------------

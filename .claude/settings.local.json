@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest tests/test_species_classifier_contract.py tests/test_mock_species_classifier.py tests/test_species_candidates_api.py tests/test_ticket3_boundary.py tests/test_ticket2_boundary.py -x --tb=short)",
+      "Bash(where python *)",
+      "Bash(py -3.11 --version)",
+      "Bash(py -3.12 --version)",
+      "Bash(/d/sunshine/.venv/Scripts/python.exe -m pytest tests/test_species_classifier_contract.py tests/test_mock_species_classifier.py tests/test_species_candidates_api.py tests/test_ticket3_boundary.py tests/test_ticket2_boundary.py --tb=short)",
+      "Bash(/d/sunshine/.venv/Scripts/python.exe -m pytest tests/test_healthz.py tests/test_healthz_contract.py tests/test_readyz_contract.py tests/test_plant_onboarding_api.py tests/test_plant_onboarding_service.py tests/test_db_models.py --tb=short)",
+      "Bash(/d/sunshine/.venv/Scripts/python.exe -m pytest tests/ --ignore=tests/test_repository_smoke.py --ignore=tests/test_plant_onboarding_db_integration.py --ignore=tests/test_migrations.py --tb=short)",
+      "Bash(/d/sunshine/.venv/Scripts/ruff.exe check *)",
+      "Bash(/d/sunshine/.venv/Scripts/python.exe -m pytest tests/ --ignore=tests/test_repository_smoke.py --ignore=tests/test_plant_onboarding_db_integration.py --ignore=tests/test_migrations.py)"
+    ]
+  }
+}

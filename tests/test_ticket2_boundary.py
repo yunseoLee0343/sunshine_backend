@@ -21,7 +21,7 @@ FORBIDDEN_DIRS = [
     "app/llm",
     "app/rag",
     "app/retrieval",
-    "app/vision",
+    # app/vision is allowed from TICKET-003 onward (port + mock only).
     "app/workers",
     "app/rules",
 ]
