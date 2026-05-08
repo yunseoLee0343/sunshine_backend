@@ -1,0 +1,77 @@
+"""TICKET-001 — Repository smoke tests.
+
+Requires a live PostgreSQL database with the schema migrated.
+Skipped automatically if DATABASE_URL is not set.
+"""
+
+import os
+
+import pytest
+import pytest_asyncio
+
+if not os.environ.get("DATABASE_URL"):
+    pytest.skip(
+        "DATABASE_URL not set — skipping smoke tests (requires live Postgres)",
+        allow_module_level=True,
+    )
+
+from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
+
+from app.db.session import AsyncSessionLocal  # noqa: E402
+from app.repositories.smoke_repository import SmokeRepository  # noqa: E402
+
+
+@pytest_asyncio.fixture
+async def session() -> AsyncSession:
+    async with AsyncSessionLocal() as s:
+        yield s
+        await s.rollback()
+
+
+@pytest.mark.asyncio
+async def test_smoke_create_user(session: AsyncSession) -> None:
+    repo = SmokeRepository(session)
+    user = await repo.create_smoke_user()
+    assert user.id is not None
+    assert user.display_name == "smoke-test-user"
+
+
+@pytest.mark.asyncio
+async def test_smoke_create_species(session: AsyncSession) -> None:
+    repo = SmokeRepository(session)
+    species = await repo.create_smoke_species()
+    assert species.id is not None
+    assert species.korean_name == "스모크 식물"
+
+
+@pytest.mark.asyncio
+async def test_smoke_create_plant_linked(session: AsyncSession) -> None:
+    repo = SmokeRepository(session)
+    user = await repo.create_smoke_user()
+    species = await repo.create_smoke_species()
+    plant = await repo.create_smoke_plant(user.id, species.id)
+    assert plant.id is not None
+    assert plant.user_id == user.id
+    assert plant.species_profile_id == species.id
+
+
+@pytest.mark.asyncio
+async def test_smoke_read_plant_back(session: AsyncSession) -> None:
+    repo = SmokeRepository(session)
+    user = await repo.create_smoke_user()
+    plant = await repo.create_smoke_plant(user.id)
+    fetched = await repo.get_plant(plant.id)
+    assert fetched is not None
+    assert fetched.id == plant.id
+    assert fetched.nickname == "smoke-plant"
+
+
+@pytest.mark.asyncio
+async def test_smoke_delete_rolls_back(session: AsyncSession) -> None:
+    repo = SmokeRepository(session)
+    user = await repo.create_smoke_user()
+    species = await repo.create_smoke_species()
+    plant = await repo.create_smoke_plant(user.id, species.id)
+    await repo.delete_smoke_data(plant, user, species)
+    fetched = await repo.get_plant(plant.id)
+    assert fetched is None
