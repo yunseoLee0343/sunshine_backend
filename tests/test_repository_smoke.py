@@ -5,7 +5,11 @@ Skipped automatically if DATABASE_URL is not set.
 
 These tests intentionally do not import app.db.session.AsyncSessionLocal.
 The production sessionmaker owns a module-level async engine, which can leak
+<<<<<<< HEAD
 asyncpg connections across pytest event loops. Each smoke test creates and
+=======
+asyncpg connections across pytest event loops.  Each smoke test creates and
+>>>>>>> 2cebda581a87780df48467f9d53672ac483ac83d
 cleans up its own engine/sessionmaker in the same async fixture lifecycle.
 """
 
@@ -33,7 +37,11 @@ async def session() -> AsyncIterator[AsyncSession]:
     """Provide an isolated AsyncSession for one smoke test.
 
     A fresh function-scoped engine plus NullPool prevents asyncpg connections
+<<<<<<< HEAD
     from being reused by a different pytest event loop. The repository methods
+=======
+    from being reused by a different pytest event loop.  The repository methods
+>>>>>>> 2cebda581a87780df48467f9d53672ac483ac83d
     only flush, so rolling back after the test leaves the migrated schema intact
     while removing smoke rows.
     """
@@ -114,4 +122,8 @@ async def test_smoke_delete_rolls_back(session: AsyncSession) -> None:
     await repo.delete_smoke_data(plant, user, species)
     fetched = await repo.get_plant(plant.id)
 
+<<<<<<< HEAD
     assert fetched is None
+=======
+    assert fetched is None
+>>>>>>> 2cebda581a87780df48467f9d53672ac483ac83d
