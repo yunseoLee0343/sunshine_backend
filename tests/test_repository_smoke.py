@@ -21,11 +21,20 @@ from app.db.session import AsyncSessionLocal  # noqa: E402
 from app.repositories.smoke_repository import SmokeRepository  # noqa: E402
 
 
-@pytest_asyncio.fixture
+# @pytest_asyncio.fixture
+# async def session() -> AsyncSession:
+#     async with AsyncSessionLocal() as s:
+#         yield s
+#         await s.rollback()
+
+@pytest_asyncio.fixture(scope="function") # 기본값은 function이지만 명시
 async def session() -> AsyncSession:
+    # AsyncSessionLocal이 사용하는 engine이 이미 세션 루프에 바인딩되어 있습니다.
     async with AsyncSessionLocal() as s:
         yield s
-        await s.rollback()
+        # 에러가 발생하는 지점: 루프가 닫히기 전 안전하게 rollback
+        if s.is_active:
+            await s.rollback()
 
 
 @pytest.mark.asyncio

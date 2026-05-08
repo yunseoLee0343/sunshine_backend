@@ -14,10 +14,17 @@ RUN pip install --no-cache-dir .
 
 # --- application source ----------------------------------------------------
 COPY app/ ./app/
+COPY alembic/ ./alembic/
+COPY alembic.ini ./
+COPY tests/ ./tests/
 
 # --- non-root user ---------------------------------------------------------
-RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+RUN addgroup --system appgroup && \
+    adduser --system --ingroup appgroup --home /home/appuser appuser && \
+    chown -R appuser:appgroup /app
+
 USER appuser
+ENV HOME=/home/appuser
 
 EXPOSE 8000
 

@@ -49,21 +49,34 @@ def test_alembic_upgrade_head() -> None:
     command.upgrade(_alembic_cfg(), "head")
 
 
-def test_required_tables_exist() -> None:
+# def test_required_tables_exist() -> None:
+#     """All 11 core tables must exist after migration."""
+
+#     async def _check() -> list[str]:
+#         engine = create_async_engine(DATABASE_URL)
+#         async with engine.connect() as conn:
+#             tables = await conn.run_sync(
+#                 lambda sync_conn: inspect(sync_conn).get_table_names()
+#             )
+#         await engine.dispose()
+#         return tables
+
+#     existing = asyncio.run(_check())
+#     for table in REQUIRED_TABLES:
+#         assert table in existing, f"Table '{table}' missing after migration"
+
+@pytest.mark.asyncio
+async def test_required_tables_exist() -> None:
     """All 11 core tables must exist after migration."""
-
-    async def _check() -> list[str]:
-        engine = create_async_engine(DATABASE_URL)
-        async with engine.connect() as conn:
-            tables = await conn.run_sync(
-                lambda sync_conn: inspect(sync_conn).get_table_names()
-            )
-        await engine.dispose()
-        return tables
-
-    existing = asyncio.run(_check())
+    # 별도의 내부 함수 없이 바로 비동기 로직 실행
+    engine = create_async_engine(DATABASE_URL)
+    async with engine.connect() as conn:
+        tables = await conn.run_sync(
+            lambda sync_conn: inspect(sync_conn).get_table_names()
+        )
+    await engine.dispose()
     for table in REQUIRED_TABLES:
-        assert table in existing, f"Table '{table}' missing after migration"
+        assert table in tables, f"Table '{table}' missing"
 
 
 def test_alembic_current_reports_head() -> None:
