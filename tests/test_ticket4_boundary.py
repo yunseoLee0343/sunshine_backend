@@ -52,7 +52,7 @@ FORBIDDEN_FILES = [
     # prompt_builder.py implemented in TICKET-016
     # chat_orchestrator.py implemented in TICKET-018
     # snapshot_repository.py is implemented in TICKET-007.
-    "app/repositories/audit_repository.py",
+    # audit_repository.py implemented in TICKET-022 — no longer forbidden.
 ]
 
 

@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.care_logs import router as care_logs_router
 from app.api.chat import router as chat_router
+from app.api.chat_runs import router as chat_runs_router
 from app.api.companion import router as companion_router
 from app.api.environment import router as environment_router
 from app.api.evidence import router as evidence_router
@@ -18,6 +19,7 @@ app = FastAPI(title=settings.APP_NAME)
 
 app.include_router(care_logs_router)
 app.include_router(chat_router)
+app.include_router(chat_runs_router)
 app.include_router(companion_router)
 app.include_router(environment_router)
 app.include_router(evidence_router)

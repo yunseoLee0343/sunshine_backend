@@ -70,7 +70,7 @@ FORBIDDEN_FILES = [
     # evidence_builder.py implemented in TICKET-015
     # prompt_builder.py implemented in TICKET-016
     # chat_orchestrator.py implemented in TICKET-018
-    "app/repositories/audit_repository.py",
+    # audit_repository.py implemented in TICKET-022 — no longer forbidden.
     # chunk_repository.py implemented in TICKET-014B
     "app/models/vision_model.py",
 ]
