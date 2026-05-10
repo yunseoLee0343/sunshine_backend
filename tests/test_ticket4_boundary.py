@@ -48,7 +48,7 @@ FORBIDDEN_FILES = [
     # care_log_service.py and care_log_repository.py are implemented in TICKET-011.
     "app/services/growth_history_service.py",
     # home_card_service.py is implemented in TICKET-009.
-    "app/services/evidence_builder.py",
+    # evidence_builder.py implemented in TICKET-015
     "app/services/prompt_builder.py",
     "app/services/chat_orchestrator.py",
     # snapshot_repository.py is implemented in TICKET-007.

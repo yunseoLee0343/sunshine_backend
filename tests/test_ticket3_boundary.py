@@ -67,7 +67,7 @@ FORBIDDEN_FILES = [
     "app/services/health_classifier.py",
     "app/services/disease_classifier.py",
     "app/services/pest_classifier.py",
-    "app/services/evidence_builder.py",
+    # evidence_builder.py implemented in TICKET-015
     "app/services/prompt_builder.py",
     "app/services/chat_orchestrator.py",
     "app/repositories/audit_repository.py",
