@@ -21,11 +21,11 @@ APP_DIR = ROOT / "app"
 
 FORBIDDEN_DIRS = [
     # app/mqtt is implemented in TICKET-006.
+    # app/rules is implemented in TICKET-008.
     "app/llm",
     "app/rag",
     "app/retrieval",
     "app/workers",
-    "app/rules",
     "deploy",
 ]
 
@@ -42,7 +42,7 @@ def test_forbidden_directory_absent(forbidden_dir: str) -> None:
 # ---------------------------------------------------------------------------
 
 FORBIDDEN_FILES = [
-    "app/services/rule_engine.py",
+    # rule_engine.py and rule_input_repository.py are implemented in TICKET-008.
     # snapshot_service.py and snapshot_repository.py are implemented in TICKET-007.
     # sensor_ingest.py and sensor_repository.py are implemented in TICKET-005.
     "app/services/care_log_service.py",

@@ -20,11 +20,11 @@ APP_DIR = ROOT / "app"
 
 FORBIDDEN_DIRS = [
     # app/mqtt is implemented in TICKET-006.
+    # app/rules is implemented in TICKET-008.
     "app/llm",
     "app/rag",
     "app/retrieval",
     "app/workers",
-    "app/rules",
     "models",
     "weights",
     "checkpoints",

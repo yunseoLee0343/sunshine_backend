@@ -18,12 +18,12 @@ ROOT = Path(__file__).parent.parent
 
 FORBIDDEN_DIRS = [
     # app/mqtt is implemented in TICKET-006.
+    # app/rules is implemented in TICKET-008.
     "app/llm",
     "app/rag",
     "app/retrieval",
     # app/vision is allowed from TICKET-003 onward (port + mock only).
     "app/workers",
-    "app/rules",
 ]
 
 
