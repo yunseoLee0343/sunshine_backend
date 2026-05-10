@@ -1,6 +1,6 @@
-"""ChatOrchestrator — TICKET-018 + TICKET-019.
+"""ChatOrchestrator — TICKET-018 + TICKET-019 + TICKET-021.
 
-Full 7-step pipeline:
+Full 7-step pipeline (standard intents):
   1. Intent classification (ChatIntentClassifier)
   2. Retrieval — try/except, optional; skipped when rag_layers is empty
   3. Evidence building (EvidenceBuilderService → ForwardContext)
@@ -9,6 +9,10 @@ Full 7-step pipeline:
   6. Response parsing ([결론][근거][행동][주의])
   6b. Pest guardrail (TICKET-019) — applied when intent == pest_reference_question
   7. Persist ChatRequest + LlmRun
+
+Companion branch (companion_plant_question — TICKET-021):
+  Calls CompanionRecommendationService, formats result as 4-section answer,
+  persists with profile="companion_orchestrator"; skips steps 2-6b.
 
 Idempotent: a duplicate request_id returns the cached LlmRun result.
 No network calls at import time.
@@ -31,6 +35,12 @@ from app.schemas.chat_answer import ChatAnswerRequest, ChatAnswerResponse, Parse
 from app.schemas.evidence_bundle import EvidenceBuildRequest
 from app.schemas.retrieval import RetrievalRequest
 from app.services.chat_intent_classifier import ChatIntentClassifier
+from app.services.companion_recommendation_service import (
+    CompanionRecommendationService,
+    PlantOwnershipError,
+    companion_prompt_hash,
+    format_companion_answer,
+)
 from app.services.evidence_builder import EvidenceBuilderService, PlantNotFoundError
 from app.services.llm_port import LLMRequest
 from app.services.pest_reference_guardrail import PestReferenceGuardrail
@@ -44,6 +54,8 @@ _LLM_CLIENT = MockLLMClient()
 _PEST_GUARDRAIL = PestReferenceGuardrail()
 
 _PEST_INTENT = "pest_reference_question"
+_COMPANION_INTENT = "companion_plant_question"
+_COMPANION_MODEL = "companion-filter-v1"
 
 _INTENT_TO_RAG_LAYERS: dict[str, list[RagLayer]] = {
     "watering_question":      ["care_knowledge", "species_profile"],
@@ -80,6 +92,17 @@ class ChatOrchestrator:
 
         # ---- 1. intent classification --------------------------------------
         intent, _confidence, _stage = _CLASSIFIER.classify(question)
+
+        # ---- companion branch (TICKET-021) --------------------------------
+        if intent == _COMPANION_INTENT:
+            return await self._run_companion(
+                session,
+                plant_id=plant_id,
+                user_id=user_id,
+                question=question,
+                request_id=request_id,
+                now=now,
+            )
 
         # ---- 2. retrieval (optional) ---------------------------------------
         rag_layers: list[RagLayer] = _INTENT_TO_RAG_LAYERS.get(
@@ -186,6 +209,74 @@ class ChatOrchestrator:
             created_at=now,
         )
 
+    async def _run_companion(
+        self,
+        session: AsyncSession,
+        *,
+        plant_id: uuid.UUID,
+        user_id: uuid.UUID,
+        question: str,
+        request_id: uuid.UUID,
+        now: datetime,
+    ) -> ChatAnswerResponse:
+        """Companion branch: filter-based answer, no LLM, no evidence pipeline."""
+        rec_resp = None
+        try:
+            svc = CompanionRecommendationService(session)
+            rec_resp = await svc.recommend(plant_id, user_id, top_k=5)
+        except (PlantNotFoundError, PlantOwnershipError):
+            pass
+
+        parsed = format_companion_answer(rec_resp)
+        ph = companion_prompt_hash(plant_id, question)
+        content = (
+            f"[결론] {parsed.결론}\n\n"
+            f"[근거] {parsed.근거}\n\n"
+            f"[행동] {parsed.행동}\n\n"
+            f"[주의] {parsed.주의}"
+        )
+
+        chat_row = ChatRequest(
+            id=request_id,
+            user_id=user_id,
+            plant_id=plant_id,
+            question=question,
+            status=_COMPANION_INTENT,
+            created_at=now,
+        )
+        session.add(chat_row)
+        await session.flush()
+
+        llm_run = LlmRun(
+            id=uuid.uuid4(),
+            request_id=request_id,
+            profile="companion_orchestrator",
+            model_name=_COMPANION_MODEL,
+            prompt_hash=ph,
+            prompt_text=question,
+            response_text=content,
+            tokens_in=0,
+            tokens_out=len(content) // 4,
+            latency_ms=0,
+            created_at=now,
+        )
+        session.add(llm_run)
+        await session.flush()
+
+        return ChatAnswerResponse(
+            request_id=request_id,
+            plant_id=plant_id,
+            intent=_COMPANION_INTENT,
+            answer=parsed,
+            guardrails_applied=[],
+            prompt_hash=ph,
+            model_name=_COMPANION_MODEL,
+            input_tokens=0,
+            output_tokens=len(content) // 4,
+            from_cache=False,
+            created_at=now,
+        )
+
     async def _load_cached(
         self, session: AsyncSession, chat_row: ChatRequest
     ) -> ChatAnswerResponse:
@@ -193,7 +284,7 @@ class ChatOrchestrator:
             select(LlmRun)
             .where(
                 LlmRun.request_id == chat_row.id,
-                LlmRun.profile == "chat_orchestrator",
+                LlmRun.profile.in_(["chat_orchestrator", "companion_orchestrator"]),
             )
             .limit(1)
         )
