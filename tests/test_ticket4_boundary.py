@@ -44,14 +44,13 @@ def test_forbidden_directory_absent(forbidden_dir: str) -> None:
 FORBIDDEN_FILES = [
     "app/services/rule_engine.py",
     "app/services/snapshot_service.py",
-    "app/services/sensor_ingest.py",
+    # sensor_ingest.py and sensor_repository.py are implemented in TICKET-005.
     "app/services/care_log_service.py",
     "app/services/growth_history_service.py",
     "app/services/home_card_service.py",
     "app/services/evidence_builder.py",
     "app/services/prompt_builder.py",
     "app/services/chat_orchestrator.py",
-    "app/repositories/sensor_repository.py",
     "app/repositories/snapshot_repository.py",
     "app/repositories/care_log_repository.py",
     "app/repositories/audit_repository.py",
@@ -155,7 +154,7 @@ def test_forbidden_routes_not_registered() -> None:
 
     paths = {route.path for route in app.routes}  # type: ignore[attr-defined]
     forbidden_substrings = [
-        "/sensor-readings",
+        # /sensor-readings is implemented in TICKET-005 — no longer forbidden.
         "/care-logs",
         "/history",
         "/home",

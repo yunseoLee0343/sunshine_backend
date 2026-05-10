@@ -37,7 +37,7 @@ def test_forbidden_directory_absent(forbidden_dir: str) -> None:
 # ---------------------------------------------------------------------------
 
 FORBIDDEN_ENDPOINTS = [
-    "/sensor-readings",
+    # /sensor-readings is implemented in TICKET-005 — no longer forbidden.
     "/chat",
     "/rules",
     "/companion",
