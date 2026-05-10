@@ -22,7 +22,7 @@ APP_DIR = ROOT / "app"
 FORBIDDEN_DIRS = [
     # app/mqtt is implemented in TICKET-006.
     # app/rules is implemented in TICKET-008.
-    "app/llm",
+    # app/llm is implemented in TICKET-013.
     "app/rag",
     "app/retrieval",
     "app/workers",
@@ -156,8 +156,8 @@ def test_forbidden_routes_not_registered() -> None:
         # /sensor-readings is implemented in TICKET-005 — no longer forbidden.
         # /home and /card are implemented in TICKET-009 — no longer forbidden.
         # /care-logs is implemented in TICKET-011 — no longer forbidden.
+        # /chat is implemented in TICKET-013 — no longer forbidden.
         "/history",
-        "/chat",
     ]
     for needle in forbidden_substrings:
         for p in paths:

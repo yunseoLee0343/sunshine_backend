@@ -19,7 +19,7 @@ ROOT = Path(__file__).parent.parent
 FORBIDDEN_DIRS = [
     # app/mqtt is implemented in TICKET-006.
     # app/rules is implemented in TICKET-008.
-    "app/llm",
+    # app/llm is implemented in TICKET-013.
     "app/rag",
     "app/retrieval",
     # app/vision is allowed from TICKET-003 onward (port + mock only).
@@ -38,7 +38,7 @@ def test_forbidden_directory_absent(forbidden_dir: str) -> None:
 
 FORBIDDEN_ENDPOINTS = [
     # /sensor-readings is implemented in TICKET-005 — no longer forbidden.
-    "/chat",
+    # /chat is implemented in TICKET-013 — no longer forbidden.
     "/rules",
     "/companion",
     "/snapshots",
