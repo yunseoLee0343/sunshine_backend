@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from app.api.home import router as home_router
 from app.api.plants import router as plants_router
 from app.api.rule_character_sync import router as rule_character_sync_router
 from app.api.sensor_readings import router as sensor_readings_router
@@ -9,6 +10,7 @@ from app.db.health import check_db
 
 app = FastAPI(title=settings.APP_NAME)
 
+app.include_router(home_router)
 app.include_router(plants_router)
 app.include_router(sensor_readings_router)
 app.include_router(rule_character_sync_router)
