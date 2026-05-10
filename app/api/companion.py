@@ -10,6 +10,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import CurrentUser, get_current_user, resolve_user_id
 from app.db.session import AsyncSessionLocal
 from app.schemas.companion_recommendation import CompanionRecommendationResponse
 from app.services.companion_recommendation_service import (
@@ -32,7 +33,8 @@ async def _get_session():
 )
 async def companion_recommendations(
     plant_id: uuid.UUID,
-    user_id: uuid.UUID,
+    user_id: uuid.UUID | None = Query(default=None),
+    current_user: CurrentUser | None = Depends(get_current_user),
     top_k: int = Query(default=5, ge=1, le=20),
     session: AsyncSession = Depends(_get_session),
 ) -> CompanionRecommendationResponse:
@@ -42,9 +44,10 @@ async def companion_recommendations(
     Only compatible candidates (score >= 0.5, assessed_dimensions > 0) are
     returned. Sorted by compatibility score desc, then common_name asc.
     """
+    uid = resolve_user_id(user_id, current_user)
     svc = CompanionRecommendationService(session)
     try:
-        return await svc.recommend(plant_id, user_id, top_k=top_k)
+        return await svc.recommend(plant_id, uid, top_k=top_k)
     except PlantNotFoundError:
         raise HTTPException(status_code=404, detail="plant not found")
     except PlantOwnershipError:

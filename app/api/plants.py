@@ -1,11 +1,12 @@
-"""Plants API router — TICKET-002 + TICKET-003 + TICKET-004 + TICKET-018."""
+"""Plants API router — TICKET-002 + TICKET-003 + TICKET-004 + TICKET-018 + TICKET-025."""
 
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import CurrentUser, get_current_user, resolve_user_id
 from app.db.session import AsyncSessionLocal
 from app.models.plant_character import PlantCharacter
 from app.repositories.character_repository import CharacterRepository
@@ -111,12 +112,17 @@ async def create_plant(
 
 @router.get("", response_model=ListPlantsResponse)
 async def list_plants(
-    user_id: uuid.UUID,
+    user_id: uuid.UUID | None = Query(default=None),
+    current_user: CurrentUser | None = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> ListPlantsResponse:
-    """Return all plants belonging to the given user_id."""
+    """Return all plants belonging to the user.
+
+    User identity: X-User-Id header (preferred) or ?user_id= query param.
+    """
+    uid = resolve_user_id(user_id, current_user)
     svc = PlantOnboardingService(session)
-    plants = await svc.list_plants(user_id)
+    plants = await svc.list_plants(uid)
     return ListPlantsResponse(plants=plants)
 
 
@@ -128,12 +134,17 @@ async def list_plants(
 @router.get("/{plant_id}", response_model=GetPlantResponse)
 async def get_plant(
     plant_id: uuid.UUID,
-    user_id: uuid.UUID,
+    user_id: uuid.UUID | None = Query(default=None),
+    current_user: CurrentUser | None = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> GetPlantResponse:
-    """Return plant detail; 403 if owned by a different user."""
+    """Return plant detail; 403 if owned by a different user.
+
+    User identity: X-User-Id header (preferred) or ?user_id= query param.
+    """
+    uid = resolve_user_id(user_id, current_user)
     svc = PlantOnboardingService(session)
-    card = await svc.get_plant(plant_id, user_id)
+    card = await svc.get_plant(plant_id, uid)
     return GetPlantResponse(plant=card)
 
 
@@ -149,6 +160,7 @@ async def get_plant(
 async def update_character_state(
     plant_id: uuid.UUID,
     req: CharacterStateUpdateRequest,
+    current_user: CurrentUser | None = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> CharacterStateResponse:
     """Append a deterministic character state for the plant.
@@ -156,12 +168,15 @@ async def update_character_state(
     Caller supplies only ``user_id`` + ``condition``; the engine resolves
     mood / expression / status_message / primary_action / reason_code. Any
     extra field on the request is rejected by Pydantic ``extra="forbid"``.
+
+    User identity: X-User-Id header (preferred) or request body user_id.
     """
+    effective_uid = current_user.user_id if current_user is not None else req.user_id
     plant_repo = PlantRepository(session)
     plant = await plant_repo.get_by_id(plant_id)
     if plant is None:
         raise HTTPException(status_code=404, detail="plant not found")
-    if plant.user_id != req.user_id:
+    if plant.user_id != effective_uid:
         raise HTTPException(status_code=403, detail="forbidden")
 
     try:
@@ -207,18 +222,22 @@ async def update_character_state(
 async def chat_care_answer(
     plant_id: uuid.UUID,
     req: ChatAnswerRequest,
+    current_user: CurrentUser | None = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> ChatAnswerResponse:
     """Run the full plant care chat pipeline and return a structured answer.
 
     Idempotent: re-submitting the same request_id returns the cached answer.
     Returns 404 when the plant_id does not exist.
+
+    User identity: X-User-Id header (preferred) or request body user_id.
     """
+    effective_uid = current_user.user_id if current_user is not None else req.user_id
     try:
         resp = await _orchestrator.run(
             session,
             plant_id=plant_id,
-            user_id=req.user_id,
+            user_id=effective_uid,
             question=req.question,
             request_id=req.request_id,
         )
