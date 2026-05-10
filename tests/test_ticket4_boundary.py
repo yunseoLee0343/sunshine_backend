@@ -45,14 +45,13 @@ FORBIDDEN_FILES = [
     # rule_engine.py and rule_input_repository.py are implemented in TICKET-008.
     # snapshot_service.py and snapshot_repository.py are implemented in TICKET-007.
     # sensor_ingest.py and sensor_repository.py are implemented in TICKET-005.
-    "app/services/care_log_service.py",
+    # care_log_service.py and care_log_repository.py are implemented in TICKET-011.
     "app/services/growth_history_service.py",
     # home_card_service.py is implemented in TICKET-009.
     "app/services/evidence_builder.py",
     "app/services/prompt_builder.py",
     "app/services/chat_orchestrator.py",
     # snapshot_repository.py is implemented in TICKET-007.
-    "app/repositories/care_log_repository.py",
     "app/repositories/audit_repository.py",
 ]
 
@@ -156,7 +155,7 @@ def test_forbidden_routes_not_registered() -> None:
     forbidden_substrings = [
         # /sensor-readings is implemented in TICKET-005 — no longer forbidden.
         # /home and /card are implemented in TICKET-009 — no longer forbidden.
-        "/care-logs",
+        # /care-logs is implemented in TICKET-011 — no longer forbidden.
         "/history",
         "/chat",
     ]
