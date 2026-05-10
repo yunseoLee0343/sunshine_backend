@@ -1,10 +1,14 @@
-"""Plant Onboarding Service (TICKET-002).
+"""Plant Onboarding Service (TICKET-002 + TICKET-004).
 
 Responsibilities:
   - validate user exists
   - validate species exists
   - create plant + initial character in one atomic transaction
   - assemble plant card DTO
+
+The initial character state is produced by the deterministic
+``CharacterStateEngine`` for the ``onboarding_created`` condition. Callers
+cannot inject mood / expression / status_message / primary_action.
 
 Forbidden:
   - sensor aggregation, Rule Engine, LLM, RAG, vision inference
@@ -18,6 +22,7 @@ from datetime import UTC, datetime
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.character_state import CharacterState
 from app.models.plant import Plant
 from app.models.plant_character import PlantCharacter
 from app.models.user import User
@@ -31,12 +36,16 @@ from app.schemas.plants import (
     PlantListItem,
     SpeciesBlock,
 )
+from app.services.character_state_engine import CharacterStateEngine
 
-# Deterministic initial character state — hardcoded per ticket §11
-_INITIAL_MOOD = "neutral"
-_INITIAL_EXPRESSION = "normal"
-_INITIAL_STATUS_MESSAGE = "새 식물이 등록되었어요."
-_INITIAL_REASON_CODE = "onboarding_created"
+# Backwards-compatible constants for tests that import them directly.
+_INITIAL_CONDITION = "onboarding_created"
+_INITIAL_STATE: CharacterState = CharacterStateEngine().map(_INITIAL_CONDITION)
+_INITIAL_MOOD = _INITIAL_STATE.mood
+_INITIAL_EXPRESSION = _INITIAL_STATE.expression
+_INITIAL_STATUS_MESSAGE = _INITIAL_STATE.status_message
+_INITIAL_PRIMARY_ACTION = _INITIAL_STATE.primary_action
+_INITIAL_REASON_CODE = _INITIAL_STATE.reason_code
 
 
 class PlantOnboardingService:
@@ -45,6 +54,7 @@ class PlantOnboardingService:
         self.species_repo = SpeciesRepository(session)
         self.plant_repo = PlantRepository(session)
         self.char_repo = CharacterRepository(session)
+        self.character_engine = CharacterStateEngine()
 
     # ------------------------------------------------------------------
     # POST /plants
@@ -75,13 +85,15 @@ class PlantOnboardingService:
         )
         await self.plant_repo.create(plant)
 
+        initial_state = self.character_engine.map(_INITIAL_CONDITION)
         character = PlantCharacter(
             id=uuid.uuid4(),
             plant_id=plant.id,
-            mood=_INITIAL_MOOD,
-            expression=_INITIAL_EXPRESSION,
-            status_message=_INITIAL_STATUS_MESSAGE,
-            reason_code=_INITIAL_REASON_CODE,
+            mood=initial_state.mood,
+            expression=initial_state.expression,
+            status_message=initial_state.status_message,
+            primary_action=initial_state.primary_action,
+            reason_code=initial_state.reason_code,
             created_at=now,
         )
         await self.char_repo.create(character)
@@ -149,6 +161,7 @@ class PlantOnboardingService:
             mood=character.mood,
             expression=character.expression,
             status_message=character.status_message,
+            primary_action=getattr(character, "primary_action", "none"),
             reason_code=character.reason_code,
         )
 

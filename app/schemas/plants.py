@@ -59,6 +59,7 @@ class CharacterBlock(BaseModel):
     mood: str
     expression: str
     status_message: str
+    primary_action: str = "none"
     reason_code: str
 
 
