@@ -75,7 +75,7 @@ FORBIDDEN_LIBS = [
     "onnxruntime",
     "openvino",
     "transformers",
-    "sentence_transformers",
+    # sentence_transformers allowed from TICKET-014B (local embedding)
     "vllm",
     "openai",
     "anthropic",

@@ -80,7 +80,7 @@ FORBIDDEN_LIBS = [
     "celery",
     "rq",
     "pgvector",
-    "sentence_transformers",
+    # sentence_transformers allowed from TICKET-014B (local embedding)
     "onnxruntime",
     "openvino",
     "transformers",

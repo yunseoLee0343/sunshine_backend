@@ -71,7 +71,7 @@ FORBIDDEN_FILES = [
     "app/services/prompt_builder.py",
     "app/services/chat_orchestrator.py",
     "app/repositories/audit_repository.py",
-    "app/repositories/chunk_repository.py",
+    # chunk_repository.py implemented in TICKET-014B
     "app/models/vision_model.py",
 ]
 
@@ -99,7 +99,7 @@ FORBIDDEN_LIBS = [
     "transformers",
     "timm",
     "ultralytics",
-    "sentence_transformers",
+    # sentence_transformers allowed from TICKET-014B (local embedding)
     "vllm",
     "openai",
     "anthropic",
