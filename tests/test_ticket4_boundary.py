@@ -43,7 +43,7 @@ def test_forbidden_directory_absent(forbidden_dir: str) -> None:
 
 FORBIDDEN_FILES = [
     "app/services/rule_engine.py",
-    "app/services/snapshot_service.py",
+    # snapshot_service.py and snapshot_repository.py are implemented in TICKET-007.
     # sensor_ingest.py and sensor_repository.py are implemented in TICKET-005.
     "app/services/care_log_service.py",
     "app/services/growth_history_service.py",
@@ -51,7 +51,7 @@ FORBIDDEN_FILES = [
     "app/services/evidence_builder.py",
     "app/services/prompt_builder.py",
     "app/services/chat_orchestrator.py",
-    "app/repositories/snapshot_repository.py",
+    # snapshot_repository.py is implemented in TICKET-007.
     "app/repositories/care_log_repository.py",
     "app/repositories/audit_repository.py",
 ]
