@@ -69,7 +69,7 @@ FORBIDDEN_FILES = [
     "app/services/pest_classifier.py",
     # evidence_builder.py implemented in TICKET-015
     # prompt_builder.py implemented in TICKET-016
-    "app/services/chat_orchestrator.py",
+    # chat_orchestrator.py implemented in TICKET-018
     "app/repositories/audit_repository.py",
     # chunk_repository.py implemented in TICKET-014B
     "app/models/vision_model.py",

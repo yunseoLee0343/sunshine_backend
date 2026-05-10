@@ -50,7 +50,7 @@ FORBIDDEN_FILES = [
     # home_card_service.py is implemented in TICKET-009.
     # evidence_builder.py implemented in TICKET-015
     # prompt_builder.py implemented in TICKET-016
-    "app/services/chat_orchestrator.py",
+    # chat_orchestrator.py implemented in TICKET-018
     # snapshot_repository.py is implemented in TICKET-007.
     "app/repositories/audit_repository.py",
 ]

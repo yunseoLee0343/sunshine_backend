@@ -1,4 +1,4 @@
-"""Plants API router — TICKET-002 + TICKET-003 + TICKET-004."""
+"""Plants API router — TICKET-002 + TICKET-003 + TICKET-004 + TICKET-018."""
 
 import uuid
 from datetime import UTC, datetime
@@ -15,6 +15,7 @@ from app.schemas.character_state import (
     CharacterStateResponse,
     CharacterStateUpdateRequest,
 )
+from app.schemas.chat_answer import ChatAnswerRequest, ChatAnswerResponse
 from app.schemas.plants import (
     CharacterBlock,
     CreatePlantRequest,
@@ -28,6 +29,8 @@ from app.services.character_state_engine import (
     CharacterStateEngine,
     UnknownConditionError,
 )
+from app.services.chat_orchestrator import ChatOrchestrator
+from app.services.evidence_builder import PlantNotFoundError
 from app.services.plant_onboarding import PlantOnboardingService
 from app.services.species_candidate_service import SpeciesCandidateService
 from app.vision.mock_species_classifier import MockSpeciesClassifier
@@ -41,6 +44,8 @@ _character_engine = CharacterStateEngine()
 # Lightweight, stateless mock — instantiated once at import time.
 # Real model loading is forbidden in this ticket.
 _mock_classifier = MockSpeciesClassifier()
+
+_orchestrator = ChatOrchestrator()
 
 
 async def get_session():
@@ -187,3 +192,37 @@ async def update_character_state(
             reason_code=state.reason_code,
         )
     )
+
+
+# ---------------------------------------------------------------------------
+# POST /plants/{plant_id}/chat  (TICKET-018)
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/{plant_id}/chat",
+    response_model=ChatAnswerResponse,
+    status_code=201,
+)
+async def chat_care_answer(
+    plant_id: uuid.UUID,
+    req: ChatAnswerRequest,
+    session: AsyncSession = Depends(get_session),
+) -> ChatAnswerResponse:
+    """Run the full plant care chat pipeline and return a structured answer.
+
+    Idempotent: re-submitting the same request_id returns the cached answer.
+    Returns 404 when the plant_id does not exist.
+    """
+    try:
+        resp = await _orchestrator.run(
+            session,
+            plant_id=plant_id,
+            user_id=req.user_id,
+            question=req.question,
+            request_id=req.request_id,
+        )
+        await session.commit()
+        return resp
+    except PlantNotFoundError:
+        raise HTTPException(status_code=404, detail="plant not found")
