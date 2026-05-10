@@ -6,6 +6,7 @@ from app.api.chat import router as chat_router
 from app.api.environment import router as environment_router
 from app.api.home import router as home_router
 from app.api.plants import router as plants_router
+from app.api.retrieval import router as retrieval_router
 from app.api.rule_character_sync import router as rule_character_sync_router
 from app.api.sensor_readings import router as sensor_readings_router
 from app.core.config import settings
@@ -18,6 +19,7 @@ app.include_router(chat_router)
 app.include_router(environment_router)
 app.include_router(home_router)
 app.include_router(plants_router)
+app.include_router(retrieval_router)
 app.include_router(sensor_readings_router)
 app.include_router(rule_character_sync_router)
 
