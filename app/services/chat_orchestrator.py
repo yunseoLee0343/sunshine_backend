@@ -1,4 +1,4 @@
-"""ChatOrchestrator — TICKET-018.
+"""ChatOrchestrator — TICKET-018 + TICKET-019.
 
 Full 7-step pipeline:
   1. Intent classification (ChatIntentClassifier)
@@ -7,6 +7,7 @@ Full 7-step pipeline:
   4. Prompt building (PromptBuilder)
   5. LLM completion (MockLLMClient)
   6. Response parsing ([결론][근거][행동][주의])
+  6b. Pest guardrail (TICKET-019) — applied when intent == pest_reference_question
   7. Persist ChatRequest + LlmRun
 
 Idempotent: a duplicate request_id returns the cached LlmRun result.
@@ -32,6 +33,7 @@ from app.schemas.retrieval import RetrievalRequest
 from app.services.chat_intent_classifier import ChatIntentClassifier
 from app.services.evidence_builder import EvidenceBuilderService, PlantNotFoundError
 from app.services.llm_port import LLMRequest
+from app.services.pest_reference_guardrail import PestReferenceGuardrail
 from app.services.prompt_builder import PromptBuilder
 from app.services.response_parser import parse_answer
 from app.services.retrieval_service import RetrievalService
@@ -39,6 +41,9 @@ from app.services.retrieval_service import RetrievalService
 _CLASSIFIER = ChatIntentClassifier()
 _PROMPT_BUILDER = PromptBuilder()
 _LLM_CLIENT = MockLLMClient()
+_PEST_GUARDRAIL = PestReferenceGuardrail()
+
+_PEST_INTENT = "pest_reference_question"
 
 _INTENT_TO_RAG_LAYERS: dict[str, list[RagLayer]] = {
     "watering_question":      ["care_knowledge", "species_profile"],
@@ -128,6 +133,15 @@ class ChatOrchestrator:
         # ---- 6. response parsing -------------------------------------------
         parsed = parse_answer(llm_resp.content)
 
+        # ---- 6b. pest reference guardrail (TICKET-019) ---------------------
+        is_reference_only = False
+        diagnosis_allowed = True
+        if intent == _PEST_INTENT:
+            gr = _PEST_GUARDRAIL.apply(parsed)
+            parsed = gr.answer
+            is_reference_only = gr.is_reference_only
+            diagnosis_allowed = gr.diagnosis_allowed
+
         # ---- 7. persist ----------------------------------------------------
         chat_row = ChatRequest(
             id=request_id,
@@ -167,6 +181,8 @@ class ChatOrchestrator:
             input_tokens=llm_resp.input_tokens,
             output_tokens=llm_resp.output_tokens,
             from_cache=from_cache,
+            is_reference_only=is_reference_only,
+            diagnosis_allowed=diagnosis_allowed,
             created_at=now,
         )
 
@@ -183,6 +199,10 @@ class ChatOrchestrator:
         )
         llm_run = result.scalar_one_or_none()
 
+        is_pest = chat_row.status == _PEST_INTENT
+        is_reference_only = is_pest
+        diagnosis_allowed = not is_pest
+
         if llm_run is None:
             return ChatAnswerResponse(
                 request_id=chat_row.id,
@@ -195,6 +215,8 @@ class ChatOrchestrator:
                 input_tokens=0,
                 output_tokens=0,
                 from_cache=True,
+                is_reference_only=is_reference_only,
+                diagnosis_allowed=diagnosis_allowed,
                 created_at=chat_row.created_at,
             )
 
@@ -210,5 +232,7 @@ class ChatOrchestrator:
             input_tokens=llm_run.tokens_in or 0,
             output_tokens=llm_run.tokens_out or 0,
             from_cache=True,
+            is_reference_only=is_reference_only,
+            diagnosis_allowed=diagnosis_allowed,
             created_at=chat_row.created_at,
         )

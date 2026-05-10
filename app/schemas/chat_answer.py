@@ -1,4 +1,4 @@
-"""Chat Care Answer schemas — TICKET-018."""
+"""Chat Care Answer schemas — TICKET-018 + TICKET-019."""
 
 from __future__ import annotations
 
@@ -35,3 +35,6 @@ class ChatAnswerResponse(BaseModel):
     output_tokens: int
     from_cache: bool
     created_at: datetime
+    # Safety metadata — TICKET-019
+    is_reference_only: bool = False   # True for pest_reference_question
+    diagnosis_allowed: bool = True    # False for pest_reference_question
