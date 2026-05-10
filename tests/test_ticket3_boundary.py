@@ -19,7 +19,7 @@ APP_DIR = ROOT / "app"
 # ---------------------------------------------------------------------------
 
 FORBIDDEN_DIRS = [
-    "app/mqtt",
+    # app/mqtt is implemented in TICKET-006.
     "app/llm",
     "app/rag",
     "app/retrieval",
@@ -104,7 +104,7 @@ FORBIDDEN_LIBS = [
     "openai",
     "anthropic",
     "redis",
-    "paho",
+    # paho is introduced in TICKET-006 for the mqtt-ingest worker.
     "pgvector",
     "celery",
     "rq",
@@ -165,7 +165,7 @@ def test_forbidden_libs_not_in_sys_modules_after_app_import() -> None:
         "vllm",
         "openai",
         "anthropic",
-        "paho",
+        # paho is introduced in TICKET-006 — not leaked by app.main import.
     } & set(sys.modules.keys())
     assert not leaked, f"Forbidden libs leaked into sys.modules: {leaked}"
 
@@ -236,7 +236,7 @@ def test_pyproject_does_not_declare_forbidden_deps() -> None:
         "openai",
         "anthropic",
         "redis",
-        "paho-mqtt",
+        # paho-mqtt is added in TICKET-006.
         "pgvector",
     ]
     for dep in forbidden_deps:

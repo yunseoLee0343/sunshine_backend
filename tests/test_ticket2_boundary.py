@@ -17,7 +17,7 @@ ROOT = Path(__file__).parent.parent
 # ---------------------------------------------------------------------------
 
 FORBIDDEN_DIRS = [
-    "app/mqtt",
+    # app/mqtt is implemented in TICKET-006.
     "app/llm",
     "app/rag",
     "app/retrieval",
@@ -75,7 +75,7 @@ FORBIDDEN_LIBS = [
     "openai",
     "anthropic",
     "vllm",
-    "paho",
+    # paho is introduced in TICKET-006 for the mqtt-ingest worker.
     "redis",
     "celery",
     "rq",
