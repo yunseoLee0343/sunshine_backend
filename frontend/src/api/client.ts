@@ -11,5 +11,18 @@ const client = axios.create({
   },
 })
 
+client.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    const status = err?.response?.status
+    if (status === 401) {
+      window.location.replace('/')
+    } else if (status === 403) {
+      return Promise.reject(new Error('이 식물에 접근할 권한이 없어요.'))
+    }
+    return Promise.reject(err)
+  },
+)
+
 export { DEMO_USER_ID }
 export default client

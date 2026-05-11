@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { sendChat } from '../../api/chat'
 import type { ChatAnswerResponse } from '../../api/types'
+import CompanionInlineCard from './CompanionInlineCard'
 import EvidenceSummary from './EvidenceSummary'
 import FixedAnswerView from './FixedAnswerView'
 import PestCautionBanner from './PestCautionBanner'
@@ -93,6 +94,9 @@ export default function ChatPage() {
               {res.is_reference_only && <PestCautionBanner />}
               <FixedAnswerView answer={res.answer} />
               <EvidenceSummary response={res} />
+              {res.intent === 'companion_plant_question' && plantId && (
+                <CompanionInlineCard plantId={plantId} />
+              )}
             </div>
           )
         })}

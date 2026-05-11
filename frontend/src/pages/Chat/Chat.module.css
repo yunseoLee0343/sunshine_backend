@@ -1,3 +1,87 @@
+/* ── Companion inline cards ── */
+.companionSection {
+  margin-top: 0.5rem;
+}
+
+.companionSectionTitle {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1b4332;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.5rem;
+}
+
+.companionList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.companionCard {
+  background: #f0faf4;
+  border: 1.5px solid #b7e4c7;
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+}
+
+.companionCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.companionName {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1b4332;
+}
+
+.companionScore {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #2d6a4f;
+  color: #fff;
+  border-radius: 20px;
+  padding: 2px 7px;
+}
+
+.companionScientific {
+  font-size: 0.75rem;
+  color: #52b788;
+  font-style: italic;
+  margin-bottom: 0.3rem;
+}
+
+.companionReasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.companionReason {
+  font-size: 0.72rem;
+  color: #2d6a4f;
+  background: #d8f3dc;
+  border-radius: 20px;
+  padding: 2px 8px;
+}
+
+.companionCaution {
+  font-size: 0.72rem;
+  color: #b45309;
+  margin-top: 0.3rem;
+}
+
+.companionEmpty {
+  font-size: 0.85rem;
+  color: #adb5bd;
+  text-align: center;
+  padding: 0.5rem;
+}
+
 /* ── Chat page layout ── */
 .chatPage {
   display: flex;

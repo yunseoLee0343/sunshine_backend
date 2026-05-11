@@ -293,37 +293,27 @@ export interface ChatAnswerResponse {
 }
 
 // ---------------------------------------------------------------------------
-// Companion recommendation
+// Companion recommendation (actual backend shapes — app/schemas/companion_recommendation.py)
 // ---------------------------------------------------------------------------
 
-export interface CompanionReasonDimension {
-  dimension: string
-  decision: 'compatible' | 'incompatible' | 'caution'
-  message: string
-}
-
-export interface CompanionRecommendation {
+export interface CompanionRecommendationItem {
   species_id: string
   common_name: string
-  decision: 'compatible' | 'incompatible' | 'caution'
-  score: number
-  reasons: CompanionReasonDimension[]
+  scientific_name: string | null
+  compatibility_score: number
+  assessed_dimensions: number
+  match_reasons: string[]
   caution_notes: string[]
-  source_chunk_ids: string[]
-}
-
-export interface CompanionEvidence {
-  current_species_id: string
-  snapshot_id: string
-  candidate_count: number
-  filter_version: string
+  is_compatible: boolean
 }
 
 export interface CompanionRecommendationResponse {
   plant_id: string
-  room_id: string
-  recommendations: CompanionRecommendation[]
-  evidence: CompanionEvidence
+  current_species_id: string | null
+  environment_available: boolean
+  candidates_assessed: number
+  recommendations: CompanionRecommendationItem[]
+  source_species_ids: string[]
 }
 
 // ---------------------------------------------------------------------------
