@@ -1,0 +1,32 @@
+.page {
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1b4332;
+  margin: 0 0 0.5rem;
+}
+
+.meta {
+  font-size: 0.8rem;
+  color: #868e96;
+  margin: 0 0 1.5rem;
+  font-family: monospace;
+}
+
+.placeholder {
+  padding: 2rem;
+  border: 2px dashed #b7e4c7;
+  border-radius: 8px;
+  color: #74c69d;
+  font-size: 0.9rem;
+  text-align: center;
+  background: #f8fff9;
+}
