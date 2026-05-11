@@ -1,0 +1,266 @@
+/* ── Page shell ── */
+.page {
+  padding-bottom: 2rem;
+}
+
+/* ── Section title ── */
+.sectionTitle {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1b4332;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 1.25rem 0 0.6rem;
+}
+
+/* ── Action buttons ── */
+.actionRow {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btnWater {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.85rem 1rem;
+  background: #2d6a4f;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.btnWater:hover:not(:disabled) {
+  background: #1b4332;
+}
+
+.btnWater:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnNote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.85rem 1.1rem;
+  background: #f0f4f8;
+  color: #495057;
+  border: 1.5px solid #dee2e6;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.btnNote:hover:not(:disabled) {
+  background: #e2e8f0;
+  border-color: #adb5bd;
+}
+
+.btnNote:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Note form ── */
+.noteForm {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.noteTextarea {
+  width: 100%;
+  min-height: 88px;
+  padding: 0.75rem;
+  border: 1.5px solid #dee2e6;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: #212529;
+  resize: vertical;
+  font-family: inherit;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.noteTextarea:focus {
+  outline: none;
+  border-color: #2d6a4f;
+}
+
+.noteActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.btnSubmitNote {
+  padding: 0.5rem 1.25rem;
+  background: #2d6a4f;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.btnSubmitNote:hover:not(:disabled) {
+  background: #1b4332;
+}
+
+.btnSubmitNote:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnCancelNote {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  color: #868e96;
+  border: 1.5px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btnCancelNote:hover {
+  background: #f8f9fa;
+}
+
+/* ── Feedback card ── */
+.feedbackCard {
+  margin-top: 0.75rem;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  background: #d8f3dc;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.feedbackEmoji {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.feedbackBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.feedbackMessage {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1b4332;
+}
+
+.feedbackMood {
+  font-size: 0.78rem;
+  color: #52b788;
+  margin-top: 0.15rem;
+}
+
+.feedbackClose {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: #52b788;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* ── Error banner ── */
+.errorBanner {
+  padding: 0.7rem 0.9rem;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #664d03;
+  margin-top: 0.75rem;
+}
+
+/* ── Timeline list ── */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.timelineItem {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f1f3f5;
+  position: relative;
+}
+
+.timelineItem:last-child {
+  border-bottom: none;
+}
+
+.timelineIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.iconWatering { background: #caf0f8; }
+.iconNote     { background: #f8f9fa; }
+
+.timelineContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.timelineAction {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #212529;
+}
+
+.timelineTime {
+  font-size: 0.75rem;
+  color: #adb5bd;
+  margin-top: 0.1rem;
+}
+
+.timelineNote {
+  font-size: 0.85rem;
+  color: #495057;
+  margin-top: 0.3rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Empty state ── */
+.emptyLogs {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: #adb5bd;
+  font-size: 0.875rem;
+}

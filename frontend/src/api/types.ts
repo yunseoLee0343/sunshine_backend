@@ -235,20 +235,28 @@ export interface HomePlantCard {
 }
 
 // ---------------------------------------------------------------------------
-// Care log
+// Care log (actual backend shapes — app/schemas/care_logs.py)
 // ---------------------------------------------------------------------------
 
-export interface CareLogFeedback {
-  character_mood: string
-  message: string
+export type CareActionType = 'watering' | 'note'
+
+export interface CareLogItem {
+  log_id: string
+  plant_id: string
+  action_type: CareActionType
+  note: string | null
+  acted_at: string
+  created_at: string
 }
 
-export interface CareLogFeedbackResponse {
-  care_log_id: string
+export interface CareLogCreateResponse {
+  log: CareLogItem
+  character: CharacterBlock | null  // non-null for watering, null for note
+}
+
+export interface CareLogListResponse {
   plant_id: string
-  action: string
-  recorded_at: string
-  feedback: CareLogFeedback
+  logs: CareLogItem[]
 }
 
 // ---------------------------------------------------------------------------
