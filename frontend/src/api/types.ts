@@ -260,36 +260,36 @@ export interface CareLogListResponse {
 }
 
 // ---------------------------------------------------------------------------
-// Chat
+// Chat (actual backend shapes — app/schemas/chat_answer.py)
 // ---------------------------------------------------------------------------
 
-export interface ChatAnswerSections {
+export interface ParsedAnswer {
   결론: string
   근거: string
   행동: string
   주의: string
 }
 
-export interface ChatAnswer {
-  text: string
-  sections: ChatAnswerSections
-}
-
-export interface ChatEvidence {
-  prompt_hash: string
-  provider: string
-  model: string
-  rule_result_ids: string[]
-  retrieved_chunk_ids: string[]
-}
+export type ChatIntent =
+  | 'watering_question'
+  | 'pest_reference_question'
+  | 'companion_plant_question'
+  | 'unknown_question'
 
 export interface ChatAnswerResponse {
   request_id: string
   plant_id: string
-  intent: string
-  profile: string
-  answer: ChatAnswer
-  evidence: ChatEvidence
+  intent: string           // ChatIntent or free string from backend
+  answer: ParsedAnswer
+  guardrails_applied: string[]
+  prompt_hash: string
+  model_name: string
+  input_tokens: number
+  output_tokens: number
+  from_cache: boolean
+  created_at: string
+  is_reference_only: boolean
+  diagnosis_allowed: boolean
 }
 
 // ---------------------------------------------------------------------------
