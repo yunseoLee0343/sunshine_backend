@@ -24,10 +24,9 @@ export default function GrowthHistoryPage() {
 
   useEffect(() => {
     if (!plantId) return
-    setLoading(true)
+    // setState calls are in async callbacks, not the synchronous effect body
     fetchHistory(plantId)
       .then((data) => {
-        // Sort newest-first by timestamp
         const sorted = [...data].sort(
           (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
         )

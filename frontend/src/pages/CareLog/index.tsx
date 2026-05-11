@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { createCareLog, fetchCareLogs } from '../../api/careLogs'
 import type { CharacterBlock, CareLogItem } from '../../api/types'
@@ -19,19 +19,25 @@ export default function CareLogPage() {
   const [noteOpen, setNoteOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const loadLogs = useCallback(async () => {
+  // Initial load — setState calls only in async callbacks, not the effect body
+  useEffect(() => {
+    if (!plantId) return
+    fetchCareLogs(plantId)
+      .then((res) => setLogs(res.logs))
+      .catch(() => {})
+      .finally(() => setLoadingLogs(false))
+  }, [plantId])
+
+  // Refetch helper called after water/note actions (not from effects)
+  async function reloadLogs() {
     if (!plantId) return
     try {
       const res = await fetchCareLogs(plantId)
       setLogs(res.logs)
     } catch {
-      // non-blocking — logs list failure shouldn't block actions
+      // non-blocking — log list failure shouldn't block actions
     }
-  }, [plantId])
-
-  useEffect(() => {
-    loadLogs().finally(() => setLoadingLogs(false))
-  }, [loadLogs])
+  }
 
   async function handleWater() {
     if (!plantId) return
@@ -41,7 +47,7 @@ export default function CareLogPage() {
     try {
       const res = await createCareLog(plantId, 'watering')
       if (res.character) setFeedback(res.character)
-      await loadLogs()
+      await reloadLogs()
     } catch {
       setError('물 주기 기록에 실패했어요. 잠시 후 다시 시도해 주세요.')
     } finally {
@@ -56,7 +62,7 @@ export default function CareLogPage() {
     try {
       await createCareLog(plantId, 'note', note)
       setNoteOpen(false)
-      await loadLogs()
+      await reloadLogs()
     } catch {
       setError('노트 저장에 실패했어요. 잠시 후 다시 시도해 주세요.')
     } finally {

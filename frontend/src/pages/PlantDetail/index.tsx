@@ -18,8 +18,7 @@ export default function PlantDetail() {
 
   useEffect(() => {
     if (!plantId) return
-    setLoading(true)
-
+    // setState calls are in async callbacks, not the synchronous effect body
     Promise.all([fetchPlant(plantId), fetchEnvironment(plantId)])
       .then(([plantRes, envRes]) => {
         setPlant(plantRes.plant)
