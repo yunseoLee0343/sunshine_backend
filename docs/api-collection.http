@@ -1,0 +1,360 @@
+### Sunshine Backend — HTTP Client Collection
+### Compatible with: JetBrains HTTP Client, VS Code REST Client
+###
+### Demo seed UUIDs (stable UUID5 — run `python -m app.seeds.demo_seed` first):
+###   USER_ID   = 2a307656-dfbb-55f6-9054-007f2014e4a9
+###   PLANT_ID  = 23d1867e-f2d0-5bf7-a4c3-f3568c06aeea
+###   SPECIES_ID = bc8ce428-d40b-539e-9fbe-f31d002d279c
+
+@base = http://localhost:8000
+@user_id = 2a307656-dfbb-55f6-9054-007f2014e4a9
+@plant_id = 23d1867e-f2d0-5bf7-a4c3-f3568c06aeea
+@species_id = bc8ce428-d40b-539e-9fbe-f31d002d279c
+@chat_request_id = 00000000-0000-0000-0028-000000000001
+@pest_request_id  = 00000000-0000-0000-0028-000000000002
+@companion_request_id = 00000000-0000-0000-0028-000000000003
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HEALTH
+# ─────────────────────────────────────────────────────────────────────────────
+
+### Liveness probe
+GET {{base}}/healthz
+
+###
+
+### Readiness probe (checks Postgres)
+GET {{base}}/readyz
+
+###
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PLANTS
+# ─────────────────────────────────────────────────────────────────────────────
+
+### List plants for demo user (header auth)
+GET {{base}}/plants
+X-User-Id: {{user_id}}
+
+###
+
+### Get plant detail — 초록이
+GET {{base}}/plants/{{plant_id}}
+X-User-Id: {{user_id}}
+
+###
+
+### Get plant detail — query param auth (fallback)
+GET {{base}}/plants/{{plant_id}}?user_id={{user_id}}
+
+###
+
+### Get home screen card for plant
+GET {{base}}/plants/{{plant_id}}/card
+X-User-Id: {{user_id}}
+
+###
+
+### Species candidates (classifier mock)
+POST {{base}}/plants/species-candidates
+Content-Type: application/json
+
+{
+  "user_id": "{{user_id}}",
+  "image_ref": "uploads/demo-leaf.jpg",
+  "locale": "ko-KR",
+  "top_k": 3
+}
+
+###
+
+### Create a new plant (returns plant_id — use in subsequent requests)
+POST {{base}}/plants
+Content-Type: application/json
+
+{
+  "user_id": "{{user_id}}",
+  "species_profile_id": "{{species_id}}",
+  "nickname": "새싹이",
+  "room_name": "침실"
+}
+
+###
+
+### Update character state (internal / dev)
+POST {{base}}/plants/{{plant_id}}/character-state
+Content-Type: application/json
+X-User-Id: {{user_id}}
+
+{
+  "condition": "needs_water"
+}
+
+###
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HOME
+# ─────────────────────────────────────────────────────────────────────────────
+
+### Home screen — all plant summary cards
+GET {{base}}/home
+X-User-Id: {{user_id}}
+
+###
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SENSOR READINGS
+# ─────────────────────────────────────────────────────────────────────────────
+
+### Inject soil moisture reading (below threshold → triggers watering rule)
+POST {{base}}/sensor-readings
+Content-Type: application/json
+
+{
+  "plant_id": "{{plant_id}}",
+  "metric": "soil_moisture_pct",
+  "value": 18.5,
+  "recorded_at": "2026-05-11T09:00:00Z"
+}
+
+###
+
+### Inject light reading
+POST {{base}}/sensor-readings
+Content-Type: application/json
+
+{
+  "plant_id": "{{plant_id}}",
+  "metric": "light_lux",
+  "value": 850.0,
+  "recorded_at": "2026-05-11T09:00:00Z"
+}
+
+###
+
+### Inject humidity reading
+POST {{base}}/sensor-readings
+Content-Type: application/json
+
+{
+  "plant_id": "{{plant_id}}",
+  "metric": "humidity_pct",
+  "value": 55.0,
+  "recorded_at": "2026-05-11T09:00:00Z"
+}
+
+###
+
+### Inject temperature reading
+POST {{base}}/sensor-readings
+Content-Type: application/json
+
+{
+  "plant_id": "{{plant_id}}",
+  "metric": "temperature_c",
+  "value": 22.5,
+  "recorded_at": "2026-05-11T09:00:00Z"
+}
+
+###
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ENVIRONMENT
+# ─────────────────────────────────────────────────────────────────────────────
+
+### Environment snapshot + character explanation
+GET {{base}}/plants/{{plant_id}}/environment
+X-User-Id: {{user_id}}
+
+###
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CARE LOGS
+# ─────────────────────────────────────────────────────────────────────────────
+
+### Log a watering action (also updates character state)
+POST {{base}}/plants/{{plant_id}}/care-logs
+Content-Type: application/json
+X-User-Id: {{user_id}}
+
+{
+  "action_type": "watering",
+  "acted_at": "2026-05-11T08:30:00Z"
+}
+
+###
+
+### Log a note
+POST {{base}}/plants/{{plant_id}}/care-logs
+Content-Type: application/json
+X-User-Id: {{user_id}}
+
+{
+  "action_type": "note",
+  "note": "새 잎이 나오기 시작했어요.",
+  "acted_at": "2026-05-11T10:00:00Z"
+}
+
+###
+
+### List care logs (newest first)
+GET {{base}}/plants/{{plant_id}}/care-logs
+X-User-Id: {{user_id}}
+
+###
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INTERNAL — Rule Engine Sync
+# ─────────────────────────────────────────────────────────────────────────────
+
+### Trigger rule engine sync (dev only — not public API)
+POST {{base}}/internal/rule-character-sync/{{plant_id}}
+
+###
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CHAT — Intent Classification
+# ─────────────────────────────────────────────────────────────────────────────
+
+### Classify question intent only (no LLM answer)
+POST {{base}}/chat/intent
+Content-Type: application/json
+
+{
+  "request_id": "{{chat_request_id}}",
+  "user_id": "{{user_id}}",
+  "plant_id": "{{plant_id}}",
+  "question": "몬스테라에 물을 얼마나 자주 줘야 해?"
+}
+
+###
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CHAT — Full Pipeline (RAG + LLM)
+# ─────────────────────────────────────────────────────────────────────────────
+
+### Chat: watering question (full pipeline)
+POST {{base}}/plants/{{plant_id}}/chat
+Content-Type: application/json
+X-User-Id: {{user_id}}
+
+{
+  "request_id": "{{chat_request_id}}",
+  "question": "몬스테라에 물을 얼마나 자주 줘야 해?"
+}
+
+###
+
+### Chat: replay same request_id → from_cache: true
+POST {{base}}/plants/{{plant_id}}/chat
+Content-Type: application/json
+X-User-Id: {{user_id}}
+
+{
+  "request_id": "{{chat_request_id}}",
+  "question": "몬스테라에 물을 얼마나 자주 줘야 해?"
+}
+
+###
+
+### Chat: pest reference question (guardrail — is_reference_only: true)
+POST {{base}}/plants/{{plant_id}}/chat
+Content-Type: application/json
+X-User-Id: {{user_id}}
+
+{
+  "request_id": "{{pest_request_id}}",
+  "question": "잎에 점이 생겼는데 병충해인가요?"
+}
+
+###
+
+### Chat: companion plant intent
+POST {{base}}/plants/{{plant_id}}/chat
+Content-Type: application/json
+X-User-Id: {{user_id}}
+
+{
+  "request_id": "{{companion_request_id}}",
+  "question": "몬스테라와 함께 키우면 좋은 식물은 뭐가 있어?"
+}
+
+###
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COMPANION RECOMMENDATIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+### Companion plant recommendations for 초록이
+GET {{base}}/plants/{{plant_id}}/companion-recommendations
+X-User-Id: {{user_id}}
+
+###
+
+### With custom top_k
+GET {{base}}/plants/{{plant_id}}/companion-recommendations?top_k=10
+X-User-Id: {{user_id}}
+
+###
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RETRIEVAL (low-level — for testing)
+# ─────────────────────────────────────────────────────────────────────────────
+
+### Hybrid retrieval query
+POST {{base}}/retrieval/query
+Content-Type: application/json
+
+{
+  "request_id": "00000000-0000-0000-0028-000000000010",
+  "plant_id": "{{plant_id}}",
+  "user_id": "{{user_id}}",
+  "question": "몬스테라 물주기 주기",
+  "top_k": 5
+}
+
+###
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EVIDENCE (internal — for testing)
+# ─────────────────────────────────────────────────────────────────────────────
+
+### Build evidence bundle
+POST {{base}}/evidence/build
+Content-Type: application/json
+
+{
+  "plant_id": "{{plant_id}}",
+  "user_id": "{{user_id}}",
+  "question": "몬스테라에 물을 얼마나 자주 줘야 해?",
+  "intent": "watering_question"
+}
+
+###
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AUDIT — Chat Run Evidence
+# ─────────────────────────────────────────────────────────────────────────────
+
+### Full decision audit for the watering chat run
+GET {{base}}/chat-runs/{{chat_request_id}}/evidence
+
+###
+
+### Full decision audit for the pest guardrail run
+GET {{base}}/chat-runs/{{pest_request_id}}/evidence
+
+###
