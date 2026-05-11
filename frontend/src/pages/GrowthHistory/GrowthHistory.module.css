@@ -1,0 +1,163 @@
+/* ── Page shell ── */
+.page {
+  padding-bottom: 2rem;
+}
+
+/* ── Filter tabs ── */
+.filterTabs {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1.1rem;
+}
+
+.filterBtn {
+  padding: 0.35rem 0.9rem;
+  border-radius: 20px;
+  border: 1.5px solid #dee2e6;
+  background: #f8f9fa;
+  color: #495057;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.filterBtn:hover {
+  background: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.filterBtnActive {
+  background: #2d6a4f;
+  border-color: #2d6a4f;
+  color: #fff;
+}
+
+.filterBtnActive:hover {
+  background: #1b4332;
+  border-color: #1b4332;
+}
+
+/* ── Timeline container ── */
+.timeline {
+  position: relative;
+  padding-left: 2rem;
+}
+
+/* Vertical line */
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #e9ecef;
+  border-radius: 1px;
+}
+
+/* ── Timeline item ── */
+.item {
+  position: relative;
+  padding: 0 0 1.25rem 0.75rem;
+}
+
+.item:last-child {
+  padding-bottom: 0;
+}
+
+/* Dot on the line */
+.dot {
+  position: absolute;
+  left: -1.55rem;
+  top: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px #e9ecef;
+}
+
+.dotCare   { background: #d8f3dc; box-shadow: 0 0 0 2px #b7e4c7; }
+.dotEnv    { background: #caf0f8; box-shadow: 0 0 0 2px #90e0ef; }
+.dotStatus { background: #fff3cd; box-shadow: 0 0 0 2px #ffc107; }
+
+/* ── Item card ── */
+.card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+
+.badgeCare   { background: #d8f3dc; color: #1b4332; }
+.badgeEnv    { background: #caf0f8; color: #023e8a; }
+.badgeStatus { background: #fff3cd; color: #664d03; }
+
+.time {
+  font-size: 0.72rem;
+  color: #adb5bd;
+  white-space: nowrap;
+}
+
+.title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #212529;
+}
+
+.summary {
+  font-size: 0.82rem;
+  color: #495057;
+  margin-top: 0.2rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Empty state ── */
+.empty {
+  text-align: center;
+  padding: 3.5rem 1rem;
+  color: #adb5bd;
+}
+
+.emptyEmoji {
+  font-size: 2.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.emptyText {
+  font-size: 0.9rem;
+}
+
+/* ── Error ── */
+.error {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #868e96;
+  font-size: 0.875rem;
+}
