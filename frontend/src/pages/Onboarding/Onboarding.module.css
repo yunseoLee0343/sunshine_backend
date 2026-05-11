@@ -211,6 +211,25 @@
   color: #58151c;
 }
 
+.candidateCard:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: #f8f9fa;
+  border-color: #dee2e6;
+}
+
+.candidateCard:disabled:hover {
+  border-color: #dee2e6;
+  background: #f8f9fa;
+}
+
+.candidateUnavailable {
+  font-size: 0.72rem;
+  color: #6c757d;
+  margin-top: 0.25rem;
+  font-style: italic;
+}
+
 /* ── Step 3: Profile form ── */
 .form {
   display: flex;

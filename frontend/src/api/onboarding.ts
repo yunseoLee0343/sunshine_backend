@@ -18,7 +18,7 @@ export async function fetchSpeciesCandidates(imageRef: string): Promise<SpeciesC
 }
 
 export async function createPlant(params: CreatePlantParams): Promise<CreatePlantResponse> {
-  const { data } = await client.post<CreatePlantResponse>('/plants', {
+  const { data } = await client.post<CreatePlantResponse>('/plants/', {
     user_id: DEMO_USER_ID,
     species_profile_id: params.species_profile_id,
     nickname: params.nickname.trim(),
