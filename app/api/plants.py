@@ -105,6 +105,18 @@ async def create_plant(
     return CreatePlantResponse(plant=card)
 
 
+# Trailing-slash alias so POST /plants/ works without a redirect chain.
+# include_in_schema=False keeps the OpenAPI spec clean.
+router.add_api_route(
+    "/",
+    create_plant,
+    methods=["POST"],
+    response_model=CreatePlantResponse,
+    status_code=201,
+    include_in_schema=False,
+)
+
+
 # ---------------------------------------------------------------------------
 # GET /plants
 # ---------------------------------------------------------------------------

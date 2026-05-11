@@ -1,4 +1,4 @@
-name: CI — TICKET-001 Core Domain Models + Postgres Baseline
+name: CI
 
 on:
   push:
@@ -6,316 +6,185 @@ on:
   pull_request:
     branches: ["**"]
 
+# Cancel in-progress runs for the same branch on new push
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # ============================================================
-  # JOB 1: preflight-boundary
+  # JOB A: backend-quality
+  # ruff lint + format + pytest coverage gate
   # ============================================================
-  preflight-boundary:
-    name: "Preflight — Boundary Check"
+  backend-quality:
+    name: "Backend Quality"
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: "Boundary: Ticket-001 forbidden directories must be absent"
-        run: |
-          FORBIDDEN=(
-            app/api
-            app/domain
-            app/services
-            app/mqtt
-            app/llm
-            app/rag
-            app/retrieval
-            app/vision
-            app/workers
-            migrations
-            deploy
-            scripts
-          )
-          VIOLATIONS=()
-          for dir in "${FORBIDDEN[@]}"; do
-            if [ -d "$dir" ]; then
-              VIOLATIONS+=("$dir")
-            fi
-          done
-          if [ ${#VIOLATIONS[@]} -gt 0 ]; then
-            echo "❌ Boundary violation — forbidden directories found:"
-            printf '  - %s\n' "${VIOLATIONS[@]}"
-            exit 1
-          fi
-          echo "✅ No forbidden directories found."
-
-      - name: "Boundary: Ticket-001 allowed dirs present"
-        run: |
-          REQUIRED=(app/db app/models app/repositories alembic)
-          MISSING=()
-          for dir in "${REQUIRED[@]}"; do
-            if [ ! -d "$dir" ]; then
-              MISSING+=("$dir")
-            fi
-          done
-          if [ ${#MISSING[@]} -gt 0 ]; then
-            echo "❌ Required Ticket-001 directories missing:"
-            printf '  - %s\n' "${MISSING[@]}"
-            exit 1
-          fi
-          echo "✅ Required Ticket-001 directories present."
-
-      - name: "Boundary: .env.example must contain only APP_* and DATABASE_*/POSTGRES_* vars"
-        run: |
-          VIOLATIONS=$(grep -v '^\s*#' .env.example | grep -v '^\s*$' \
-            | grep -v '^APP_' | grep -v '^DATABASE_' | grep -v '^POSTGRES_') || true
-          if [ -n "$VIOLATIONS" ]; then
-            echo "❌ Boundary violation — .env.example contains disallowed vars:"
-            echo "$VIOLATIONS"
-            exit 1
-          fi
-          echo "✅ .env.example contains only allowed variables."
-
-      - name: "Boundary: docker-compose services must be exactly backend + postgres"
-        run: |
-          SERVICES=$(docker compose config --services 2>/dev/null | sort)
-          EXPECTED=$(printf 'backend\npostgres' | sort)
-          if [ "$SERVICES" != "$EXPECTED" ]; then
-            echo "❌ Boundary violation — compose services: $SERVICES"
-            exit 1
-          fi
-          echo "✅ docker-compose has exactly: backend, postgres."
-
-      - name: "Boundary: forbidden dependencies absent from pyproject.toml"
-        run: |
-          FORBIDDEN_DEPS=(
-            paho-mqtt redis celery rq openai anthropic vllm pgvector
-            sentence-transformers torch torchvision transformers
-            tensorflow onnxruntime openvino opencv-python Pillow
-          )
-          VIOLATIONS=()
-          for dep in "${FORBIDDEN_DEPS[@]}"; do
-            if grep -qi "\"${dep}" pyproject.toml 2>/dev/null || grep -qi "'${dep}" pyproject.toml 2>/dev/null; then
-              VIOLATIONS+=("$dep")
-            fi
-          done
-          if [ ${#VIOLATIONS[@]} -gt 0 ]; then
-            echo "❌ Forbidden deps found:"
-            printf '  - %s\n' "${VIOLATIONS[@]}"
-            exit 1
-          fi
-          echo "✅ No forbidden dependencies found."
-
-      - name: "Boundary: no product API endpoints in app/main.py"
-        run: |
-          FORBIDDEN_ENDPOINTS=(
-            "/plants" "/sensor-readings" "/chat" "/mqtt" "/rag" "/vision" "/admin"
-          )
-          VIOLATIONS=()
-          for ep in "${FORBIDDEN_ENDPOINTS[@]}"; do
-            if grep -q "\"${ep}" app/main.py 2>/dev/null; then
-              VIOLATIONS+=("$ep")
-            fi
-          done
-          if [ ${#VIOLATIONS[@]} -gt 0 ]; then
-            echo "❌ Forbidden endpoints found in app/main.py:"
-            printf '  - %s\n' "${VIOLATIONS[@]}"
-            exit 1
-          fi
-          echo "✅ No forbidden product endpoints."
-
-      - name: "Boundary: no auto-migration on startup"
-        run: |
-          if grep -rq "create_all\|upgrade.*head\|alembic.*upgrade" app/main.py app/db/ 2>/dev/null; then
-            echo "❌ Auto-migration detected in startup code"
-            exit 1
-          fi
-          echo "✅ No auto-migration on startup."
-
-  # ============================================================
-  # JOB 2: python-quality
-  # ============================================================
-  python-quality:
-    name: "Python Quality (ruff)"
-    runs-on: ubuntu-latest
-    needs: preflight-boundary
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Install with dev extras
         run: pip install -e ".[dev]"
 
-      - name: ruff check
-        run: ruff check .
-
-      - name: ruff format check
-        run: ruff format --check .
+      - name: Run quality gate (ruff + pytest + coverage)
+        run: bash scripts/check_gate.sh
 
   # ============================================================
-  # JOB 3: python-tests (no live DB)
+  # JOB B: frontend-quality
+  # TypeScript check + ESLint + Vite production build
+  # Does NOT require a live backend.
   # ============================================================
-  python-tests:
-    name: "Python Tests (pytest — no DB)"
+  frontend-quality:
+    name: "Frontend Quality"
     runs-on: ubuntu-latest
-    needs: preflight-boundary
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - name: Set up Node
+        uses: actions/setup-node@v4
         with:
-          python-version: "3.11"
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
-      - name: Install with dev extras
-        run: pip install -e ".[dev]"
-
-      - name: Import gate (no side-effects)
-        run: python -c "import app.main; print('import OK')"
-
-      - name: pytest (unit + contract tests, skip DB tests)
+      - name: Install dependencies
+        working-directory: frontend
         run: |
-          pytest -v \
-            tests/test_healthz.py \
-            tests/test_healthz_contract.py \
-            tests/test_readyz_contract.py \
-            tests/test_db_models.py
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Production build
+        working-directory: frontend
+        run: npm run build
 
   # ============================================================
-  # JOB 4: docker-functional-gate
+  # JOB C: docker-integration
+  # Full stack: postgres + mqtt + backend + mqtt-ingest
+  # Runs migration, seed, and smoke tests against live container.
   # ============================================================
-  docker-functional-gate:
-    name: "Docker Functional Gate"
+  docker-integration:
+    name: "Docker Integration"
     runs-on: ubuntu-latest
-    needs: [python-quality, python-tests]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: "Docker gate: compose config validation"
+      - name: Validate compose config
         run: docker compose config
 
-      - name: "Docker gate: compose services == backend + postgres"
+      - name: Assert required services present
         run: |
-          SERVICES=$(docker compose config --services | sort)
-          EXPECTED=$(printf 'backend\npostgres' | sort)
-          if [ "$SERVICES" != "$EXPECTED" ]; then
-            echo "❌ Compose services mismatch: $SERVICES"
-            exit 1
-          fi
-          echo "✅ Compose services: backend, postgres"
+          SERVICES=$(docker compose config --services)
+          for svc in backend postgres; do
+            if ! echo "$SERVICES" | grep -qx "$svc"; then
+              echo "❌ Required service '$svc' missing from docker-compose"
+              exit 1
+            fi
+          done
+          echo "✅ Required services present: $(echo "$SERVICES" | tr '\n' ' ')"
 
-      - name: "Docker gate: build image"
-        run: docker build -t sunshine-backend:ci .
+      - name: Start stack
+        run: docker compose up --build -d postgres mqtt backend mqtt-ingest
 
-      - name: "Docker gate: import side-effect check inside container"
+      - name: Wait for postgres healthy
         run: |
-          docker run --rm sunshine-backend:ci \
-            python -c "import app.main; print('import OK')"
-
-      - name: "Docker gate: start compose stack"
-        run: |
-          docker compose up -d
-          # Wait for postgres healthcheck
           for i in $(seq 1 60); do
-            STATUS=$(docker compose ps --format json postgres 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('Health',''))" 2>/dev/null || echo "")
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' \
+              "$(docker compose ps -q postgres)" 2>/dev/null || echo "")
             if [ "$STATUS" = "healthy" ]; then
-              echo "✅ Postgres healthy after ${i}s"
+              echo "✅ postgres healthy (${i}s)"
               break
             fi
-            echo "Waiting for postgres… (${i}s)"
+            [ "$i" -eq 60 ] && { echo "❌ postgres did not become healthy in 60s"; exit 1; }
             sleep 1
           done
 
-      - name: "Docker gate: run alembic upgrade head"
-        run: |
-          docker compose exec -T backend \
-            sh -c "DATABASE_URL=\$DATABASE_URL alembic upgrade head"
+      - name: Run alembic upgrade head
+        run: docker compose exec -T backend alembic upgrade head
 
-      - name: "Docker gate: wait for backend /healthz"
+      - name: Seed demo data
+        run: docker compose exec -T backend python -m app.seeds.demo_seed
+
+      - name: Wait for backend /healthz
         run: |
           for i in $(seq 1 30); do
             if curl -sf http://localhost:8000/healthz > /dev/null 2>&1; then
-              echo "✅ Backend ready after ${i}s"
+              echo "✅ backend ready (${i}s)"
               break
             fi
-            echo "Waiting for backend… (${i}s)"
+            [ "$i" -eq 30 ] && { echo "❌ backend did not respond in 30s"; exit 1; }
             sleep 1
           done
 
-      - name: "Docker gate: GET /healthz → 200 + exact JSON"
+      - name: "Smoke: GET /healthz → 200"
         run: |
-          RESPONSE=$(curl -sf http://localhost:8000/healthz)
+          BODY=$(curl -sf http://localhost:8000/healthz)
           EXPECTED='{"status":"ok","service":"sunshine-backend"}'
-          if [ "$RESPONSE" != "$EXPECTED" ]; then
-            echo "❌ /healthz mismatch: $RESPONSE"
-            exit 1
+          if [ "$BODY" != "$EXPECTED" ]; then
+            echo "❌ /healthz body mismatch: $BODY"; exit 1
           fi
-          echo "✅ /healthz exact JSON."
+          echo "✅ /healthz: $BODY"
 
-      - name: "Docker gate: GET /readyz → 200 (DB up)"
+      - name: "Smoke: GET /readyz → 200 with database ok"
         run: |
           STATUS=$(curl -o /dev/null -sw "%{http_code}" http://localhost:8000/readyz)
           if [ "$STATUS" != "200" ]; then
-            echo "❌ /readyz returned $STATUS (expected 200 when DB is up)"
-            exit 1
+            echo "❌ /readyz returned $STATUS"; exit 1
           fi
-          BODY=$(curl -sf http://localhost:8000/readyz)
-          echo "✅ /readyz: $BODY"
-
-      - name: "Docker gate: /readyz checks.database == ok"
-        run: |
-          BODY=$(curl -sf http://localhost:8000/readyz)
-          DB_STATUS=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['checks']['database'])")
-          if [ "$DB_STATUS" != "ok" ]; then
-            echo "❌ /readyz checks.database: $DB_STATUS"
-            exit 1
+          DB=$(curl -sf http://localhost:8000/readyz \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['checks']['database'])")
+          if [ "$DB" != "ok" ]; then
+            echo "❌ /readyz checks.database: $DB"; exit 1
           fi
           echo "✅ /readyz checks.database: ok"
+
+      - name: "Smoke: GET /home → 200 (demo user)"
+        run: |
+          STATUS=$(curl -o /dev/null -sw "%{http_code}" \
+            -H "X-User-Id: 7507fdac-da23-5956-a5a4-9239de655be0" \
+            http://localhost:8000/home)
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ /home returned $STATUS"; exit 1
+          fi
+          echo "✅ /home: 200"
 
       - name: Cleanup
         if: always()
         run: docker compose down -v || true
 
   # ============================================================
-  # JOB 5: report-summary
+  # JOB D: ci-summary
+  # Aggregates results; fails the workflow if any required job failed.
   # ============================================================
-  report-summary:
-    name: "Report Summary"
+  ci-summary:
+    name: "CI Summary"
     runs-on: ubuntu-latest
-    needs: [preflight-boundary, python-quality, python-tests, docker-functional-gate]
+    needs: [backend-quality, frontend-quality, docker-integration]
     if: always()
     steps:
-      - name: Print functional gate report
+      - name: Report
         run: |
-          echo "================================================================"
-          echo " TICKET-001 — Core Domain Models + Postgres Baseline"
-          echo " Functional Gate Report"
-          echo "================================================================"
-          echo ""
-          echo "Ticket ID : TICKET-001"
-          echo "Result    : ${{ (needs.preflight-boundary.result == 'success' && needs.python-quality.result == 'success' && needs.python-tests.result == 'success' && needs.docker-functional-gate.result == 'success') && 'PASS ✅' || 'FAIL ❌' }}"
-          echo ""
-          echo "--- Job Results ---"
-          echo "  preflight-boundary    : ${{ needs.preflight-boundary.result }}"
-          echo "  python-quality        : ${{ needs.python-quality.result }}"
-          echo "  python-tests          : ${{ needs.python-tests.result }}"
-          echo "  docker-functional-gate: ${{ needs.docker-functional-gate.result }}"
-          echo ""
-          echo "--- Passed Invariants ---"
-          echo "  GET /healthz → 200 (liveness-only, no DB)"
-          echo "  GET /readyz  → 200 (DB reachable)"
-          echo "  GET /readyz  → 503 (DB unavailable)"
-          echo "  compose services == backend + postgres"
-          echo "  alembic upgrade head creates 11 tables"
-          echo "  no auto-migration on startup"
-          echo "  no forbidden dirs/deps/endpoints"
-          echo ""
-          echo "--- Non-Goals Confirmed Absent ---"
-          echo "  no MQTT / Redis / LLM / RAG / vision / worker / Nginx / vLLM"
-          echo "  no product API endpoints"
-          echo "  no pgvector / metadata.create_all shortcut"
-          echo "================================================================"
+          echo "================================================"
+          echo " Sunshine CI — Full-Stack Gate"
+          echo "================================================"
+          echo "  backend-quality   : ${{ needs.backend-quality.result }}"
+          echo "  frontend-quality  : ${{ needs.frontend-quality.result }}"
+          echo "  docker-integration: ${{ needs.docker-integration.result }}"
+          echo "================================================"
+          if [[ "${{ needs.backend-quality.result }}"    != "success" ||
+                "${{ needs.frontend-quality.result }}"   != "success" ||
+                "${{ needs.docker-integration.result }}" != "success" ]]; then
+            echo "❌ One or more jobs failed."
+            exit 1
+          fi
+          echo "✅ All jobs passed."

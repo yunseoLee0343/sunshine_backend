@@ -76,7 +76,8 @@ export default function Onboarding() {
     try {
       const res = await fetchSpeciesCandidates(selectedImageRef)
       setCandidates(res.candidates)
-      setSelectedCandidate(res.candidates[0] ?? null)
+      // Auto-select the first registerable candidate; skip null-profile fallbacks
+      setSelectedCandidate(res.candidates.find((c) => c.species_profile_id != null) ?? null)
       setStep(2)
     } catch {
       setError('종 후보 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
@@ -139,7 +140,7 @@ export default function Onboarding() {
 
   const nextDisabled =
     (step === 1 && !selectedImageRef) ||
-    (step === 2 && !selectedCandidate) ||
+    (step === 2 && (!selectedCandidate || !selectedCandidate.species_profile_id)) ||
     loading
 
   const nextLabel =

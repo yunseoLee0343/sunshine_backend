@@ -27,7 +27,9 @@ export default function Step2Candidates({ candidates, selected, onSelect }: Prop
 
       <div className={styles.candidateList}>
         {candidates.map((c, i) => {
+          const isRegisterable = !!c.species_profile_id
           const isSelected =
+            isRegisterable &&
             selected !== null &&
             selected.species_profile_id === c.species_profile_id &&
             selected.label_ko === c.label_ko
@@ -37,13 +39,19 @@ export default function Step2Candidates({ candidates, selected, onSelect }: Prop
               key={c.species_profile_id ?? `${c.label_en}-${i}`}
               type="button"
               className={`${styles.candidateCard} ${isSelected ? styles.selected : ''}`}
-              onClick={() => onSelect(c)}
-              aria-pressed={isSelected}
+              onClick={() => { if (isRegisterable) onSelect(c) }}
+              disabled={!isRegisterable}
+              aria-pressed={isRegisterable ? isSelected : undefined}
             >
               <div className={styles.candidateInfo}>
                 <span className={styles.candidateName}>{c.label_ko}</span>
                 {c.scientific_name && (
                   <span className={styles.candidateScientific}>{c.scientific_name}</span>
+                )}
+                {!isRegisterable && (
+                  <span className={styles.candidateUnavailable}>
+                    아직 등록할 수 없는 후보예요. 몬스테라·스킨답서스·필로덴드론 중 하나를 선택해 주세요.
+                  </span>
                 )}
               </div>
               <span
