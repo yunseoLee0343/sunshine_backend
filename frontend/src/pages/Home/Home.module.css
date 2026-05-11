@@ -1,0 +1,202 @@
+/* ── Page shell ── */
+.page {}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1b4332;
+}
+
+.addBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 1rem;
+  background: #2d6a4f;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.addBtn:hover {
+  background: #1b4332;
+}
+
+/* ── Plant card grid ── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.875rem;
+}
+
+/* ── Single plant card ── */
+.card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 1.1rem 1.25rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  border: 1.5px solid transparent;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.card:hover {
+  border-color: #b7e4c7;
+  box-shadow: 0 2px 8px rgba(45,106,79,0.12);
+}
+
+.cardTop {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+}
+
+/* character avatar */
+.avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  flex-shrink: 0;
+}
+
+.avatarHappy    { background: #d8f3dc; }
+.avatarThirsty  { background: #caf0f8; }
+.avatarSleepy   { background: #e9ecef; }
+.avatarStressed { background: #fff3cd; }
+.avatarNeutral  { background: #f0f0f0; }
+
+.cardInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.cardName {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #212529;
+  margin-bottom: 0.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardMeta {
+  font-size: 0.78rem;
+  color: #868e96;
+  margin-bottom: 0.5rem;
+}
+
+.statusMsg {
+  font-size: 0.85rem;
+  color: #495057;
+  font-style: italic;
+}
+
+/* care status pill */
+.careStatus {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.careGood       { background: #d8f3dc; color: #1b4332; }
+.careAction     { background: #ffe5d9; color: #6d1a36; }
+.careWatch      { background: #fff3cd; color: #664d03; }
+.careInsufficient { background: #e9ecef; color: #495057; }
+
+/* ── Today action banner ── */
+.actionBanner {
+  margin-top: 0.75rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.actionWater    { background: #caf0f8; color: #023e8a; }
+.actionLight    { background: #fff3cd; color: #664d03; }
+.actionHumidity { background: #e0cffc; color: #3d0066; }
+.actionDefault  { background: #f8f9fa; color: #495057; }
+
+/* ── Sensor badges row ── */
+.envRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+.envBadge {
+  font-size: 0.75rem;
+  color: #495057;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 2px 7px;
+}
+
+/* ── Empty state ── */
+.empty {
+  text-align: center;
+  padding: 4rem 1rem;
+}
+
+.emptyEmoji {
+  font-size: 3rem;
+  margin-bottom: 0.75rem;
+}
+
+.emptyTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #343a40;
+  margin-bottom: 0.4rem;
+}
+
+.emptyHint {
+  font-size: 0.875rem;
+  color: #868e96;
+  margin-bottom: 1.5rem;
+}
+
+.emptyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.6rem 1.5rem;
+  background: #2d6a4f;
+  color: #fff;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.emptyBtn:hover {
+  background: #1b4332;
+}

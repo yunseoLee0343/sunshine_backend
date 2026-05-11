@@ -1,0 +1,179 @@
+/* ── Page shell ── */
+.page {
+  padding-bottom: 2rem;
+}
+
+/* ── Character card ── */
+.characterCard {
+  border-radius: 16px;
+  padding: 1.5rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  text-align: center;
+}
+
+.characterHappy    { background: #d8f3dc; }
+.characterThirsty  { background: #caf0f8; }
+.characterSleepy   { background: #e9ecef; }
+.characterStressed { background: #fff3cd; }
+.characterNeutral  { background: #f0f0f0; }
+
+.characterEmoji {
+  font-size: 4rem;
+  line-height: 1;
+}
+
+.characterName {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #212529;
+}
+
+.characterSpecies {
+  font-size: 0.85rem;
+  color: #495057;
+}
+
+.characterMessage {
+  font-size: 0.95rem;
+  color: #343a40;
+  font-style: italic;
+  padding: 0.5rem 1rem;
+  background: rgba(255,255,255,0.6);
+  border-radius: 8px;
+  max-width: 300px;
+}
+
+/* ── Section heading ── */
+.sectionTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1b4332;
+  margin: 1.25rem 0 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* ── Sensor grid ── */
+.sensorGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.sensorCell {
+  background: #fff;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.sensorLabel {
+  font-size: 0.72rem;
+  color: #868e96;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sensorValue {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #212529;
+}
+
+.sensorUnit {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: #868e96;
+  margin-left: 0.15rem;
+}
+
+.sensorEmpty {
+  font-size: 1rem;
+  color: #adb5bd;
+}
+
+/* ── Summary panel ── */
+.summaryPanel {
+  background: #fff;
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  margin-bottom: 0.75rem;
+}
+
+.summaryPanelTitle {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #495057;
+  margin-bottom: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid #f8f9fa;
+  font-size: 0.85rem;
+  color: #495057;
+}
+
+.summaryRow:last-child {
+  border-bottom: none;
+}
+
+.summaryMetric {
+  color: #868e96;
+}
+
+.summaryStats {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.statChip {
+  font-size: 0.78rem;
+  color: #343a40;
+}
+
+.statChipLabel {
+  font-size: 0.7rem;
+  color: #adb5bd;
+  margin-right: 0.2rem;
+}
+
+.summaryEmpty {
+  font-size: 0.85rem;
+  color: #adb5bd;
+  text-align: center;
+  padding: 0.5rem;
+}
+
+/* ── Character explanation ── */
+.explanationBox {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  font-size: 0.875rem;
+  color: #495057;
+  line-height: 1.55;
+  margin-top: 0.5rem;
+}
+
+/* ── Loading / error ── */
+.error {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #868e96;
+  font-size: 0.9rem;
+}
