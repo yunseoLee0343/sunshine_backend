@@ -36,9 +36,7 @@ class SpeciesCandidateService:
         # image_ref is opaque — never opened. Treat None as empty string so
         # the classifier still produces its deterministic fallback.
         ref = image_ref or ""
-        candidates = await self.classifier.classify_species(
-            ref, locale=locale, top_k=top_k
-        )
+        candidates = await self.classifier.classify_species(ref, locale=locale, top_k=top_k)
 
         items: list[SpeciesCandidateItem] = []
         for c in candidates:
@@ -63,9 +61,7 @@ class SpeciesCandidateService:
         A missing match is not an error.
         """
         if candidate.scientific_name:
-            profile = await self.species_repo.find_by_scientific_name(
-                candidate.scientific_name
-            )
+            profile = await self.species_repo.find_by_scientific_name(candidate.scientific_name)
             if profile is not None:
                 return profile.id
 

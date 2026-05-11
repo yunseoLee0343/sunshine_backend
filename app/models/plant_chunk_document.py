@@ -13,7 +13,8 @@ class PlantChunkDocument(Base):
     __tablename__ = "plant_chunk_documents"
     __table_args__ = (
         UniqueConstraint(
-            "plant_knowledge_id", "chunk_kind",
+            "plant_knowledge_id",
+            "chunk_kind",
             name="uq_chunk_document_entry_kind",
         ),
     )

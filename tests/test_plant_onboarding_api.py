@@ -138,9 +138,7 @@ def test_post_plants_response_includes_initial_character() -> None:
 
 
 def test_post_plants_missing_species_profile_id_returns_422() -> None:
-    status, _ = asyncio.run(
-        _post("/plants", {"user_id": str(uuid.uuid4()), "nickname": "초록이"})
-    )
+    status, _ = asyncio.run(_post("/plants", {"user_id": str(uuid.uuid4()), "nickname": "초록이"}))
     assert status == 422
 
 
@@ -183,9 +181,7 @@ def test_post_plants_unknown_species_returns_404() -> None:
 
     with patch(
         f"{_SVC_PATH}.create_plant",
-        new=AsyncMock(
-            side_effect=HTTPException(status_code=404, detail="species_profile not found")
-        ),
+        new=AsyncMock(side_effect=HTTPException(status_code=404, detail="species_profile not found")),
     ):
         status, _ = asyncio.run(
             _post(
@@ -251,9 +247,7 @@ def test_get_plant_detail_returns_200() -> None:
     plant_id = uuid.uuid4()
     card = _make_card(user_id=user_id, plant_id=plant_id)
     with patch(f"{_SVC_PATH}.get_plant", new=AsyncMock(return_value=card)):
-        status, body = asyncio.run(
-            _get(f"/plants/{plant_id}", params={"user_id": str(user_id)})
-        )
+        status, body = asyncio.run(_get(f"/plants/{plant_id}", params={"user_id": str(user_id)}))
     assert status == 200
     assert "plant" in body
 
@@ -266,9 +260,7 @@ def test_get_plant_cross_user_returns_403() -> None:
         f"{_SVC_PATH}.get_plant",
         new=AsyncMock(side_effect=HTTPException(status_code=403, detail="forbidden")),
     ):
-        status, _ = asyncio.run(
-            _get(f"/plants/{plant_id}", params={"user_id": str(uuid.uuid4())})
-        )
+        status, _ = asyncio.run(_get(f"/plants/{plant_id}", params={"user_id": str(uuid.uuid4())}))
     assert status == 403
 
 
@@ -280,7 +272,5 @@ def test_get_plant_not_found_returns_404() -> None:
         f"{_SVC_PATH}.get_plant",
         new=AsyncMock(side_effect=HTTPException(status_code=404, detail="not found")),
     ):
-        status, _ = asyncio.run(
-            _get(f"/plants/{plant_id}", params={"user_id": str(uuid.uuid4())})
-        )
+        status, _ = asyncio.run(_get(f"/plants/{plant_id}", params={"user_id": str(uuid.uuid4())}))
     assert status == 404

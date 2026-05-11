@@ -3,10 +3,7 @@
 import asyncio
 import json
 import uuid
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
 
 from app.mqtt.schemas import IngestOutcome
 from app.services.mqtt_sensor_ingest import MqttSensorIngestService
@@ -42,6 +39,7 @@ def _make_svc() -> tuple[MqttSensorIngestService, MagicMock]:
 # Happy paths
 # ---------------------------------------------------------------------------
 
+
 def test_inserted_outcome() -> None:
     svc, _ = _make_svc()
     from app.schemas.sensor_readings import SensorReadingResponse
@@ -51,9 +49,7 @@ def test_inserted_outcome() -> None:
             "app.services.mqtt_sensor_ingest.SensorIngestService.ingest",
             new=AsyncMock(
                 return_value=(
-                    SensorReadingResponse(
-                        status="inserted", ignored=False, reading_id="r-mqtt-001"
-                    ),
+                    SensorReadingResponse(status="inserted", ignored=False, reading_id="r-mqtt-001"),
                     201,
                 )
             ),
@@ -93,6 +89,7 @@ def test_duplicate_ignored_outcome() -> None:
 # Rejection paths
 # ---------------------------------------------------------------------------
 
+
 def test_invalid_topic_rejected() -> None:
     svc, _ = _make_svc()
     result = asyncio.run(svc.process("sensor/readings/", _valid_payload()))
@@ -115,9 +112,7 @@ def test_invalid_schema_rejected() -> None:
 def test_device_id_mismatch_rejected() -> None:
     svc, _ = _make_svc()
     # topic says dev-001, payload says different-device
-    result = asyncio.run(
-        svc.process(_TOPIC, _valid_payload(device_id="different-device"))
-    )
+    result = asyncio.run(svc.process(_TOPIC, _valid_payload(device_id="different-device")))
     assert result.outcome == IngestOutcome.device_id_mismatch
 
 
@@ -129,9 +124,7 @@ def test_plant_not_found() -> None:
     async def _go():
         with patch(
             "app.services.mqtt_sensor_ingest.SensorIngestService.ingest",
-            new=AsyncMock(
-                side_effect=HTTPException(status_code=404, detail="plant not found")
-            ),
+            new=AsyncMock(side_effect=HTTPException(status_code=404, detail="plant not found")),
         ):
             return await svc.process(_TOPIC, _valid_payload())
 
@@ -141,15 +134,14 @@ def test_plant_not_found() -> None:
 
 def test_naive_timestamp_rejected() -> None:
     svc, _ = _make_svc()
-    result = asyncio.run(
-        svc.process(_TOPIC, _valid_payload(measured_at="2026-05-10T10:00:00"))
-    )
+    result = asyncio.run(svc.process(_TOPIC, _valid_payload(measured_at="2026-05-10T10:00:00")))
     assert result.outcome == IngestOutcome.invalid_payload
 
 
 # ---------------------------------------------------------------------------
 # Boundary — no new DB logic, delegates to SensorIngestService
 # ---------------------------------------------------------------------------
+
 
 def test_delegates_to_sensor_ingest_service() -> None:
     """MqttSensorIngestService must call SensorIngestService.ingest, not its own DB code."""
@@ -158,9 +150,7 @@ def test_delegates_to_sensor_ingest_service() -> None:
     svc, _ = _make_svc()
     ingest_mock = AsyncMock(
         return_value=(
-            SensorReadingResponse(
-                status="inserted", ignored=False, reading_id="r-mqtt-001"
-            ),
+            SensorReadingResponse(status="inserted", ignored=False, reading_id="r-mqtt-001"),
             201,
         )
     )

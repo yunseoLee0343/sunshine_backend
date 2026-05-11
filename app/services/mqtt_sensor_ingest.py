@@ -48,9 +48,7 @@ class MqttSensorIngestService:
             req = SensorReadingRequest.model_validate(raw)
         except ValidationError as exc:
             logger.warning("payload validation failed for topic %r: %s", topic, exc)
-            return MqttIngestResult(
-                outcome=IngestOutcome.invalid_payload, detail=str(exc)
-            )
+            return MqttIngestResult(outcome=IngestOutcome.invalid_payload, detail=str(exc))
 
         # 4. device_id cross-check.
         if req.device_id != topic_device_id:
@@ -63,16 +61,11 @@ class MqttSensorIngestService:
             return MqttIngestResult(
                 outcome=IngestOutcome.device_id_mismatch,
                 reading_id=req.reading_id,
-                detail=(
-                    f"topic device_id {topic_device_id!r} != "
-                    f"payload device_id {req.device_id!r}"
-                ),
+                detail=(f"topic device_id {topic_device_id!r} != payload device_id {req.device_id!r}"),
             )
 
         # 5. Delegate to existing service (all plant-lookup + idempotency logic).
         try:
-            from fastapi import HTTPException
-
             svc = SensorIngestService(self._session)
             response, _ = await svc.ingest(req)
             outcome = IngestOutcome(response.status)

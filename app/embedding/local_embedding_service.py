@@ -21,6 +21,7 @@ class LocalEmbeddingService:
         if self._model is not None:
             return
         from sentence_transformers import SentenceTransformer  # loaded on demand
+
         self._model = SentenceTransformer(self.model_name)
 
     def embed(self, text: str) -> list[float]:

@@ -17,9 +17,7 @@ class EvidenceRepository:
         self.session = session
 
     async def get_by_hash(self, evidence_hash: str) -> EvidenceBundle | None:
-        result = await self.session.execute(
-            select(EvidenceBundle).where(EvidenceBundle.evidence_hash == evidence_hash)
-        )
+        result = await self.session.execute(select(EvidenceBundle).where(EvidenceBundle.evidence_hash == evidence_hash))
         return result.scalar_one_or_none()
 
     async def save(self, ctx: ForwardContext) -> EvidenceBundle:

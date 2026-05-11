@@ -25,9 +25,7 @@ class SnapshotRepository:
     # sensor_readings queries (read-only)
     # ------------------------------------------------------------------
 
-    async def get_latest_reading(
-        self, plant_id: uuid.UUID, before: datetime
-    ) -> SensorReading | None:
+    async def get_latest_reading(self, plant_id: uuid.UUID, before: datetime) -> SensorReading | None:
         """Return the single most recent reading with measured_at <= before."""
         result = await self.session.execute(
             select(SensorReading)

@@ -21,14 +21,10 @@ class HomeCardRepository:
         self.session = session
 
     async def list_plants_by_user(self, user_id: uuid.UUID) -> list[Plant]:
-        result = await self.session.execute(
-            select(Plant).where(Plant.user_id == user_id)
-        )
+        result = await self.session.execute(select(Plant).where(Plant.user_id == user_id))
         return list(result.scalars().all())
 
-    async def get_plant_for_user(
-        self, plant_id: uuid.UUID, user_id: uuid.UUID
-    ) -> Plant | None:
+    async def get_plant_for_user(self, plant_id: uuid.UUID, user_id: uuid.UUID) -> Plant | None:
         """Return plant only if it belongs to the requesting user; None otherwise."""
         result = await self.session.execute(
             select(Plant).where(
@@ -38,9 +34,7 @@ class HomeCardRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_species_profile(
-        self, species_profile_id: uuid.UUID
-    ) -> SpeciesProfile | None:
+    async def get_species_profile(self, species_profile_id: uuid.UUID) -> SpeciesProfile | None:
         return await self.session.get(SpeciesProfile, species_profile_id)
 
     async def get_latest_character(self, plant_id: uuid.UUID) -> PlantCharacter | None:

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 
-from app.schemas.chat_intent import ROUTING_TABLE, Intent
+from app.schemas.chat_intent import Intent
 
 # ---------------------------------------------------------------------------
 # Compiled patterns — order matters only within each list; first match wins.
@@ -20,8 +20,8 @@ _PATTERNS: dict[str, list[re.Pattern[str]]] = {
     for intent, patterns in {
         "watering_question": [
             r"물\s*[은을를]?\s*(줘|주기|주는|방법|언제|얼마|자주)",
-            r"물.{1,20}(자주|언제|얼마)",       # 물 뒤 조사·어미 사이에 수식어
-            r"(자주|언제|얼마나).{1,20}물",     # 역순: 자주/언제 → 물
+            r"물.{1,20}(자주|언제|얼마)",  # 물 뒤 조사·어미 사이에 수식어
+            r"(자주|언제|얼마나).{1,20}물",  # 역순: 자주/언제 → 물
             r"관수|물주기|water(?:ing)?",
             r"흙\s*이?\s*말라|건조\s*해|수분\s*부족|목말라|목이\s*말",
         ],

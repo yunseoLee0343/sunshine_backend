@@ -13,7 +13,6 @@ import pytest
 from app.models.sensor_reading import SensorReading
 from app.schemas.environment_snapshots import (
     AggregationSummary,
-    EnvironmentSnapshotResult,
 )
 from app.services.snapshot_service import SnapshotService, _stats
 
@@ -126,9 +125,7 @@ def test_aggregate_missing_data_latest() -> None:
     async def _go():
         with (
             patch.object(svc.repo, "get_latest_reading", new=AsyncMock(return_value=None)),
-            patch.object(
-                svc.repo, "get_readings_in_range", new=AsyncMock(return_value=[])
-            ),
+            patch.object(svc.repo, "get_readings_in_range", new=AsyncMock(return_value=[])),
             patch.object(svc.repo, "upsert", new=AsyncMock()) as upsert_mock,
         ):
             summary = await svc.aggregate(_PLANT, now=_NOW)
@@ -149,9 +146,7 @@ def test_aggregate_missing_data_windows_not_persisted() -> None:
     async def _go():
         with (
             patch.object(svc.repo, "get_latest_reading", new=AsyncMock(return_value=None)),
-            patch.object(
-                svc.repo, "get_readings_in_range", new=AsyncMock(return_value=[])
-            ),
+            patch.object(svc.repo, "get_readings_in_range", new=AsyncMock(return_value=[])),
             patch.object(svc.repo, "upsert", new=AsyncMock()) as mock_upsert,
         ):
             await svc.aggregate(_PLANT, now=_NOW)
@@ -173,9 +168,7 @@ def test_aggregate_upsert_called_for_data_windows() -> None:
     async def _go():
         with (
             patch.object(svc.repo, "get_latest_reading", new=AsyncMock(return_value=r)),
-            patch.object(
-                svc.repo, "get_readings_in_range", new=AsyncMock(side_effect=[[r], [r]])
-            ),
+            patch.object(svc.repo, "get_readings_in_range", new=AsyncMock(side_effect=[[r], [r]])),
             patch.object(svc.repo, "upsert", new=AsyncMock()) as mock_upsert,
         ):
             await svc.aggregate(_PLANT, now=_NOW)
@@ -249,9 +242,7 @@ def test_latest_window_timestamps_equal_reading_timestamp() -> None:
     async def _go():
         with (
             patch.object(svc.repo, "get_latest_reading", new=AsyncMock(return_value=r)),
-            patch.object(
-                svc.repo, "get_readings_in_range", new=AsyncMock(return_value=[])
-            ),
+            patch.object(svc.repo, "get_readings_in_range", new=AsyncMock(return_value=[])),
             patch.object(svc.repo, "upsert", new=AsyncMock()),
         ):
             return await svc.aggregate(_PLANT, now=_NOW)
@@ -269,6 +260,7 @@ def test_latest_window_timestamps_equal_reading_timestamp() -> None:
 
 def test_no_character_engine_import() -> None:
     import app.services.snapshot_service as mod
+
     src = open(mod.__file__, encoding="utf-8").read()
     assert "character_state_engine" not in src
     assert "CharacterStateEngine" not in src
@@ -281,9 +273,7 @@ def test_returns_aggregation_summary_type() -> None:
     async def _go():
         with (
             patch.object(svc.repo, "get_latest_reading", new=AsyncMock(return_value=None)),
-            patch.object(
-                svc.repo, "get_readings_in_range", new=AsyncMock(return_value=[])
-            ),
+            patch.object(svc.repo, "get_readings_in_range", new=AsyncMock(return_value=[])),
             patch.object(svc.repo, "upsert", new=AsyncMock()),
         ):
             return await svc.aggregate(_PLANT, now=_NOW)

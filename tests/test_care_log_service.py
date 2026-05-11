@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.models.care_log import CareLog
 from app.models.plant import Plant
-from app.models.plant_character import PlantCharacter
 from app.schemas.care_logs import CareLogRequest
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
@@ -82,9 +81,7 @@ def test_request_rejects_naive_acted_at() -> None:
 
 def test_request_rejects_extra_fields() -> None:
     with pytest.raises(Exception):
-        CareLogRequest(
-            user_id=_USER_ID, action_type="watering", acted_at=_NOW, bogus="x"
-        )
+        CareLogRequest(user_id=_USER_ID, action_type="watering", acted_at=_NOW, bogus="x")
 
 
 # ---------------------------------------------------------------------------

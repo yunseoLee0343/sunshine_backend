@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.domain.chunk import CHUNK_KINDS, BuiltChunk, ChunkBuildSummary
+from app.domain.chunk import CHUNK_KINDS, ChunkBuildSummary
 from app.embedding.chunk_builder import (
     _hash,
     _join_lines,
@@ -27,7 +27,6 @@ from app.models.plant_pest_reference import PlantPestReference
 from app.models.plant_placement import PlantPlacement
 from app.models.plant_seasonal_watering import PlantSeasonalWatering
 from app.models.plant_visual_trait import PlantVisualTrait
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -338,6 +337,7 @@ def test_chunk_build_summary_defaults() -> None:
 
 def test_chunk_builder_has_no_forbidden_imports() -> None:
     import app.embedding.chunk_builder as mod
+
     src = open(mod.__file__, encoding="utf-8").read()
     for forbidden in ("openai", "anthropic", "pgvector", "torch", "requests"):
         assert forbidden not in src, f"Forbidden import: {forbidden!r}"
@@ -345,6 +345,7 @@ def test_chunk_builder_has_no_forbidden_imports() -> None:
 
 def test_local_embedding_service_has_no_api_calls() -> None:
     import app.embedding.local_embedding_service as mod
+
     src = open(mod.__file__, encoding="utf-8").read()
     for forbidden in ("openai", "anthropic", "requests", "httpx", "aiohttp"):
         assert forbidden not in src, f"Forbidden: {forbidden!r}"

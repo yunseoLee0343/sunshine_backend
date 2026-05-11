@@ -131,9 +131,7 @@ async def test_create_plant_unknown_user_raises_404() -> None:
     session.get.return_value = None  # user not found
 
     svc = PlantOnboardingService(session)
-    req = CreatePlantRequest(
-        user_id=uuid.uuid4(), species_profile_id=uuid.uuid4(), nickname="초록이"
-    )
+    req = CreatePlantRequest(user_id=uuid.uuid4(), species_profile_id=uuid.uuid4(), nickname="초록이")
     with pytest.raises(HTTPException) as exc:
         await svc.create_plant(req)
     assert exc.value.status_code == 404
@@ -150,9 +148,7 @@ async def test_create_plant_unknown_species_raises_404() -> None:
     svc = PlantOnboardingService(session)
     svc.species_repo.get_by_id = AsyncMock(return_value=None)
 
-    req = CreatePlantRequest(
-        user_id=user.id, species_profile_id=uuid.uuid4(), nickname="초록이"
-    )
+    req = CreatePlantRequest(user_id=user.id, species_profile_id=uuid.uuid4(), nickname="초록이")
     with pytest.raises(HTTPException) as exc:
         await svc.create_plant(req)
     assert exc.value.status_code == 404
@@ -203,6 +199,4 @@ def test_create_plant_request_empty_nickname_rejected() -> None:
     from pydantic import ValidationError
 
     with pytest.raises(ValidationError):
-        CreatePlantRequest(
-            user_id=uuid.uuid4(), species_profile_id=uuid.uuid4(), nickname="   "
-        )
+        CreatePlantRequest(user_id=uuid.uuid4(), species_profile_id=uuid.uuid4(), nickname="   ")

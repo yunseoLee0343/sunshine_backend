@@ -110,11 +110,7 @@ class PlantOnboardingService:
         plants = await self.plant_repo.list_by_user(user_id)
         items: list[PlantListItem] = []
         for plant in plants:
-            species = (
-                await self.species_repo.get_by_id(plant.species_profile_id)
-                if plant.species_profile_id
-                else None
-            )
+            species = await self.species_repo.get_by_id(plant.species_profile_id) if plant.species_profile_id else None
             character = await self.char_repo.get_latest_for_plant(plant.id)
             items.append(self._to_list_item(plant, species, character))
         return items
@@ -131,11 +127,7 @@ class PlantOnboardingService:
         if plant.user_id != user_id:
             raise HTTPException(status_code=403, detail="forbidden")
 
-        species = (
-            await self.species_repo.get_by_id(plant.species_profile_id)
-            if plant.species_profile_id
-            else None
-        )
+        species = await self.species_repo.get_by_id(plant.species_profile_id) if plant.species_profile_id else None
         character = await self.char_repo.get_latest_for_plant(plant.id)
         return self._to_plant_card(plant, species, character)
 

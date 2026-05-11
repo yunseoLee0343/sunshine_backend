@@ -21,7 +21,7 @@ class PlantKnowledgeRow:
     origin: str | None
 
     # --- care requirements
-    growth_temp_text: str | None     # raw text e.g. "18~24℃"
+    growth_temp_text: str | None  # raw text e.g. "18~24℃"
     light_requirement: str | None
     watering_frequency: str | None
     soil_type: str | None
@@ -42,7 +42,7 @@ class PlantKnowledgeRow:
     leaf_shape: str | None
     flower_color: str | None
     flower_season: str | None
-    height_text: str | None          # raw text e.g. "30~60cm"
+    height_text: str | None  # raw text e.g. "30~60cm"
 
     # --- placement
     placement_locations: str | None
@@ -52,7 +52,7 @@ class PlantKnowledgeRow:
 
     # --- source provenance
     source_row_number: int
-    source_row_hash: str             # SHA-256 of the raw row
+    source_row_hash: str  # SHA-256 of the raw row
 
 
 @dataclass

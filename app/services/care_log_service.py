@@ -52,9 +52,7 @@ class CareLogService:
         self._log_repo = CareLogRepository(session)
         self._char_repo = CharacterRepository(session)
 
-    async def log_care(
-        self, plant_id: uuid.UUID, req: CareLogRequest
-    ) -> CareLogCreateResponse:
+    async def log_care(self, plant_id: uuid.UUID, req: CareLogRequest) -> CareLogCreateResponse:
         plant = await self._log_repo.get_plant_for_user(plant_id, req.user_id)
         if plant is None:
             raise PlantNotFoundError(plant_id)
@@ -96,9 +94,7 @@ class CareLogService:
 
         return CareLogCreateResponse(log=_to_item(log_row), character=char_block)
 
-    async def list_care_logs(
-        self, plant_id: uuid.UUID, user_id: uuid.UUID
-    ) -> CareLogListResponse:
+    async def list_care_logs(self, plant_id: uuid.UUID, user_id: uuid.UUID) -> CareLogListResponse:
         plant = await self._log_repo.get_plant_for_user(plant_id, user_id)
         if plant is None:
             raise PlantNotFoundError(plant_id)
@@ -106,5 +102,5 @@ class CareLogService:
         logs = await self._log_repo.list_for_plant(plant_id)
         return CareLogListResponse(
             plant_id=plant_id,
-            logs=[_to_item(l) for l in logs],
+            logs=[_to_item(log) for log in logs],
         )

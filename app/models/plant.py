@@ -12,9 +12,7 @@ class Plant(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
-    species_profile_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("species_profiles.id"), nullable=True
-    )
+    species_profile_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("species_profiles.id"), nullable=True)
     nickname: Mapped[str] = mapped_column(Text, nullable=False)
     room_name: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

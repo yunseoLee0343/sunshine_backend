@@ -60,9 +60,7 @@ class ChunkBuildService:
 
     # ---------------------------------------------------------------------- private
 
-    async def _build_entry(
-        self, entry: PlantKnowledgeEntry, summary: ChunkBuildSummary
-    ) -> None:
+    async def _build_entry(self, entry: PlantKnowledgeEntry, summary: ChunkBuildSummary) -> None:
         try:
             care = await self._get_one(PlantCareRequirement, entry.id)
             watering = await self._get_one(PlantSeasonalWatering, entry.id)
@@ -118,14 +116,10 @@ class ChunkBuildService:
             summary.error_details.append(f"entry {entry.id}: {exc}")
 
     async def _get_one(self, model, entry_id: uuid.UUID):
-        result = await self.session.execute(
-            select(model).where(model.entry_id == entry_id)
-        )
+        result = await self.session.execute(select(model).where(model.entry_id == entry_id))
         return result.scalar_one_or_none()
 
-    async def _get_doc(
-        self, plant_knowledge_id: uuid.UUID, chunk_kind: str
-    ) -> PlantChunkDocument | None:
+    async def _get_doc(self, plant_knowledge_id: uuid.UUID, chunk_kind: str) -> PlantChunkDocument | None:
         result = await self.session.execute(
             select(PlantChunkDocument).where(
                 PlantChunkDocument.plant_knowledge_id == plant_knowledge_id,
@@ -141,9 +135,7 @@ class ChunkBuildService:
         now: datetime,
     ) -> None:
         result = await self.session.execute(
-            select(PlantChunkEmbedding).where(
-                PlantChunkEmbedding.chunk_document_id == doc.id
-            )
+            select(PlantChunkEmbedding).where(PlantChunkEmbedding.chunk_document_id == doc.id)
         )
         existing = result.scalar_one_or_none()
         if existing is not None:
@@ -152,13 +144,15 @@ class ChunkBuildService:
             existing.model_name = self.emb.model_name
             existing.updated_at = now
         else:
-            self.session.add(PlantChunkEmbedding(
-                id=uuid.uuid4(),
-                chunk_document_id=doc.id,
-                model_name=self.emb.model_name,
-                vector_dim=len(vector),
-                vector=vector,
-                created_at=now,
-                updated_at=now,
-            ))
+            self.session.add(
+                PlantChunkEmbedding(
+                    id=uuid.uuid4(),
+                    chunk_document_id=doc.id,
+                    model_name=self.emb.model_name,
+                    vector_dim=len(vector),
+                    vector=vector,
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
         await self.session.flush()

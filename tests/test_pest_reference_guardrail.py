@@ -17,7 +17,6 @@ from app.services.pest_reference_guardrail import (
     ValidationResult,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures / helpers
 # ---------------------------------------------------------------------------
@@ -325,9 +324,7 @@ async def test_orchestrator_pest_sets_reference_only_flag() -> None:
         patch("app.services.chat_orchestrator._LLM_CLIENT") as mock_llm,
     ):
         mock_cls.classify.return_value = ("pest_reference_question", 0.9, "rule")
-        mock_ret_cls.return_value.query = AsyncMock(
-            return_value=MagicMock(request_id=uuid.uuid4())
-        )
+        mock_ret_cls.return_value.query = AsyncMock(return_value=MagicMock(request_id=uuid.uuid4()))
         mock_ev_cls.return_value.build = AsyncMock(return_value=(ctx, False))
 
         from app.domain.prompt_build_result import PromptBuildResult
@@ -371,12 +368,7 @@ async def test_orchestrator_pest_주의_contains_disclaimer() -> None:
 
     ctx = _make_forward_context(plant_id, user_id, question)
     # Deliberately omit the REQUIRED_DISCLAIMER — guardrail must inject it
-    pest_content = (
-        "[결론] 증상 관찰.\n\n"
-        "[근거] 지식 기반.\n\n"
-        "[행동] 문의.\n\n"
-        "[주의] 주의 필요."
-    )
+    pest_content = "[결론] 증상 관찰.\n\n[근거] 지식 기반.\n\n[행동] 문의.\n\n[주의] 주의 필요."
     llm_resp = LLMResponse(
         request_id=request_id,
         content=pest_content,
@@ -395,9 +387,7 @@ async def test_orchestrator_pest_주의_contains_disclaimer() -> None:
         patch("app.services.chat_orchestrator._LLM_CLIENT") as mock_llm,
     ):
         mock_cls.classify.return_value = ("pest_reference_question", 0.9, "rule")
-        mock_ret_cls.return_value.query = AsyncMock(
-            return_value=MagicMock(request_id=uuid.uuid4())
-        )
+        mock_ret_cls.return_value.query = AsyncMock(return_value=MagicMock(request_id=uuid.uuid4()))
         mock_ev_cls.return_value.build = AsyncMock(return_value=(ctx, False))
 
         from app.domain.prompt_build_result import PromptBuildResult
@@ -474,9 +464,7 @@ async def test_orchestrator_non_pest_flags_are_false_and_true() -> None:
         patch("app.services.chat_orchestrator._LLM_CLIENT") as mock_llm,
     ):
         mock_cls.classify.return_value = ("watering_question", 0.9, "rule")
-        mock_ret_cls.return_value.query = AsyncMock(
-            return_value=MagicMock(request_id=uuid.uuid4())
-        )
+        mock_ret_cls.return_value.query = AsyncMock(return_value=MagicMock(request_id=uuid.uuid4()))
         mock_ev_cls.return_value.build = AsyncMock(return_value=(ctx, False))
 
         from app.domain.prompt_build_result import PromptBuildResult

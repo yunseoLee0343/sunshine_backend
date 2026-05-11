@@ -120,9 +120,7 @@ def test_unknown_condition_rejected(bogus) -> None:
 def test_status_messages_come_from_template_set() -> None:
     """All produced status_messages must equal the documented strings."""
     expected_messages = {row[4] for row in EXPECTED.values()}
-    actual_messages = {
-        CharacterStateEngine().map(c).status_message for c in EXPECTED.keys()
-    }
+    actual_messages = {CharacterStateEngine().map(c).status_message for c in EXPECTED.keys()}
     assert actual_messages == expected_messages
 
 

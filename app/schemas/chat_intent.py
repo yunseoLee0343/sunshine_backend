@@ -31,6 +31,7 @@ ClassifierStage = Literal["rule", "llm"]
 # Routing metadata (deterministic per intent — no DB storage needed)
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class IntentRouting:
     selected_rule_modules: list[str]
@@ -86,10 +87,11 @@ ROUTING_TABLE: dict[str, IntentRouting] = {
 # Request / Response DTOs
 # ---------------------------------------------------------------------------
 
+
 class ChatIntentRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    request_id: uuid.UUID               # caller-supplied; used for idempotency
+    request_id: uuid.UUID  # caller-supplied; used for idempotency
     user_id: uuid.UUID
     plant_id: uuid.UUID | None = None
     question: str = Field(..., min_length=1, max_length=2000)

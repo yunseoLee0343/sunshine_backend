@@ -15,9 +15,7 @@ from __future__ import annotations
 from app.domain.character_state import Condition
 from app.rules.schemas import RuleEngineResult
 
-_HUMIDITY_TEMP_REASON_CODES = frozenset(
-    ["low_humidity", "high_humidity", "low_temperature", "high_temperature"]
-)
+_HUMIDITY_TEMP_REASON_CODES = frozenset(["low_humidity", "high_humidity", "low_temperature", "high_temperature"])
 
 
 def map_to_condition(result: RuleEngineResult) -> Condition:
@@ -31,9 +29,7 @@ def map_to_condition(result: RuleEngineResult) -> Condition:
     if action == "increase_light" or "low_light" in codes:
         return "low_light"
 
-    if action in ("stabilize_humidity", "adjust_temperature") or (
-        codes & _HUMIDITY_TEMP_REASON_CODES
-    ):
+    if action in ("stabilize_humidity", "adjust_temperature") or (codes & _HUMIDITY_TEMP_REASON_CODES):
         return "unstable_humidity"
 
     return "good"

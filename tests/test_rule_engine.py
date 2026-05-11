@@ -6,13 +6,10 @@ import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 
-import pytest
-
 from app.rules import humidity, light, temperature, watering
 from app.rules.types import (
     LatestSnapshot,
     RecentCareLog,
-    RuleResult,
     SpeciesThresholds,
 )
 from app.services.rule_engine import RuleEngine
@@ -200,8 +197,8 @@ def test_engine_all_good() -> None:
 def test_engine_water_takes_top_priority() -> None:
     """water beats increase_light even if both fire."""
     snap = LatestSnapshot(
-        soil_moisture_avg_pct=5.0,   # low → water
-        light_avg_lux=100.0,          # low → increase_light
+        soil_moisture_avg_pct=5.0,  # low → water
+        light_avg_lux=100.0,  # low → increase_light
         humidity_avg_pct=60.0,
         temperature_avg_c=22.0,
     )
@@ -213,7 +210,7 @@ def test_engine_water_takes_top_priority() -> None:
 def test_engine_any_needs_action_wins_status() -> None:
     snap = LatestSnapshot(
         soil_moisture_avg_pct=50.0,
-        light_avg_lux=100.0,          # triggers needs_action
+        light_avg_lux=100.0,  # triggers needs_action
         humidity_avg_pct=60.0,
         temperature_avg_c=22.0,
     )
@@ -234,7 +231,7 @@ def test_engine_highest_severity_adopted() -> None:
 
 
 def test_engine_all_insufficient_data() -> None:
-    snap = LatestSnapshot()   # all None
+    snap = LatestSnapshot()  # all None
     thresh = SpeciesThresholds()  # all None
     result = RuleEngine().evaluate(_PLANT, thresh, snap, _NO_LOGS, now=_NOW)
     assert result.care_status == "insufficient_data"
@@ -271,6 +268,7 @@ def test_engine_deterministic() -> None:
 
 def test_engine_no_llm_import() -> None:
     import app.services.rule_engine as mod
+
     src = open(mod.__file__, encoding="utf-8").read()
     for forbidden in ("openai", "anthropic", "vllm", "langchain"):
         assert forbidden not in src
@@ -279,6 +277,14 @@ def test_engine_no_llm_import() -> None:
 def test_engine_output_schema_fields() -> None:
     result = RuleEngine().evaluate(_PLANT, _THRESH, _GOOD_SNAP, _NO_LOGS, now=_NOW)
     d = result.model_dump()
-    for key in ("plant_id", "evaluated_at", "care_status", "primary_action",
-                "severity", "reason_codes", "evidence_facts", "rule_results"):
+    for key in (
+        "plant_id",
+        "evaluated_at",
+        "care_status",
+        "primary_action",
+        "severity",
+        "reason_codes",
+        "evidence_facts",
+        "rule_results",
+    ):
         assert key in d

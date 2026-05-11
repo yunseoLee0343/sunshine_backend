@@ -6,6 +6,7 @@ import uuid
 
 import pytest
 
+from app.llm.mock_client import _MODEL_NAME, _PROVIDER, MockLLMClient
 from app.services.llm_port import (
     LLMPort,
     LLMRequest,
@@ -13,9 +14,7 @@ from app.services.llm_port import (
     ModelMetadata,
     StreamingNotSupportedError,
 )
-from app.llm.mock_client import MockLLMClient, _MODEL_NAME, _PROVIDER
 from app.utils.hash import prompt_hash, short_hash
-
 
 # ---------------------------------------------------------------------------
 # Utils
@@ -366,16 +365,16 @@ async def test_mock_rule_authority_mentioned_in_근거() -> None:
 
 def test_llm_port_has_no_external_api_imports() -> None:
     import app.services.llm_port as mod
+
     src = open(mod.__file__, encoding="utf-8").read()
     # Check for "import X" patterns — avoid false-positives from class names like LLMRequest
-    for forbidden in ("import openai", "import anthropic", "import requests",
-                      "import httpx", "import aiohttp"):
+    for forbidden in ("import openai", "import anthropic", "import requests", "import httpx", "import aiohttp"):
         assert forbidden not in src, f"Forbidden: {forbidden!r}"
 
 
 def test_mock_client_has_no_external_api_imports() -> None:
     import app.llm.mock_client as mod
+
     src = open(mod.__file__, encoding="utf-8").read()
-    for forbidden in ("import openai", "import anthropic", "import requests",
-                      "import httpx", "import aiohttp"):
+    for forbidden in ("import openai", "import anthropic", "import requests", "import httpx", "import aiohttp"):
         assert forbidden not in src, f"Forbidden: {forbidden!r}"

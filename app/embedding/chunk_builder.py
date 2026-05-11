@@ -8,10 +8,9 @@ Each build_* function assembles a fixed-format Korean text string from
 from __future__ import annotations
 
 import hashlib
-import uuid
 from typing import TYPE_CHECKING
 
-from app.domain.chunk import CHUNK_KINDS, BuiltChunk, ChunkKind
+from app.domain.chunk import CHUNK_KINDS, BuiltChunk
 
 if TYPE_CHECKING:
     from app.models.plant_care_requirement import PlantCareRequirement

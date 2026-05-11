@@ -23,16 +23,8 @@ def evaluate(
     care_logs: list[RecentCareLog],  # noqa: ARG001
 ) -> RuleResult:
     humi = snapshot.humidity_avg_pct
-    humi_min = (
-        float(thresholds.humidity_min_pct)
-        if thresholds.humidity_min_pct is not None
-        else None
-    )
-    humi_max = (
-        float(thresholds.humidity_max_pct)
-        if thresholds.humidity_max_pct is not None
-        else None
-    )
+    humi_min = float(thresholds.humidity_min_pct) if thresholds.humidity_min_pct is not None else None
+    humi_max = float(thresholds.humidity_max_pct) if thresholds.humidity_max_pct is not None else None
 
     if humi is None or humi_min is None:
         return RuleResult(

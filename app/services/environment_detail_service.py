@@ -31,21 +31,11 @@ from app.schemas.environment_detail import (
 
 _EXPLANATIONS: dict[str, str] = {
     "good": "식물이 건강한 환경에 있어요. 센서 데이터가 안정적으로 유지되고 있습니다.",
-    "low_soil_moisture": (
-        "현재 캐릭터 상태는 최근 환경 요약의 토양 수분 부족과 연결됩니다."
-    ),
-    "low_light": (
-        "현재 캐릭터 상태는 최근 환경 요약의 빛 부족과 연결됩니다."
-    ),
-    "unstable_humidity": (
-        "현재 캐릭터 상태는 최근 환경 요약의 습도 또는 온도 불안정과 연결됩니다."
-    ),
-    "after_watering": (
-        "최근 물 주기 이후 식물이 회복 중이에요. 토양 수분이 안정될 때까지 지켜봐 주세요."
-    ),
-    "onboarding_created": (
-        "식물이 새로 등록되었어요. 센서 데이터가 쌓이면 더 자세한 환경 분석을 제공할 수 있어요."
-    ),
+    "low_soil_moisture": ("현재 캐릭터 상태는 최근 환경 요약의 토양 수분 부족과 연결됩니다."),
+    "low_light": ("현재 캐릭터 상태는 최근 환경 요약의 빛 부족과 연결됩니다."),
+    "unstable_humidity": ("현재 캐릭터 상태는 최근 환경 요약의 습도 또는 온도 불안정과 연결됩니다."),
+    "after_watering": ("최근 물 주기 이후 식물이 회복 중이에요. 토양 수분이 안정될 때까지 지켜봐 주세요."),
+    "onboarding_created": ("식물이 새로 등록되었어요. 센서 데이터가 쌓이면 더 자세한 환경 분석을 제공할 수 있어요."),
 }
 
 _FALLBACK_EXPLANATION = "환경 데이터를 분석 중이에요."
@@ -86,9 +76,7 @@ class EnvironmentDetailService:
     def __init__(self, session: AsyncSession) -> None:
         self._repo = EnvironmentDetailRepository(session)
 
-    async def get_detail(
-        self, plant_id: uuid.UUID, user_id: uuid.UUID
-    ) -> EnvironmentDetailResponse | None:
+    async def get_detail(self, plant_id: uuid.UUID, user_id: uuid.UUID) -> EnvironmentDetailResponse | None:
         """Return None when the plant doesn't exist or belongs to another user."""
         plant = await self._repo.get_plant_for_user(plant_id, user_id)
         if plant is None:

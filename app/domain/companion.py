@@ -6,7 +6,7 @@ All objects are frozen dataclasses (immutable). No DB, no LLM, no I/O.
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
@@ -49,7 +49,7 @@ class RoomEnvironment:
     light_avg_lux: float | None = None
     humidity_avg_pct: float | None = None
     temperature_avg_c: float | None = None
-    room_name: str | None = None   # free-form label, e.g. "거실", "창가"
+    room_name: str | None = None  # free-form label, e.g. "거실", "창가"
 
 
 @dataclass(frozen=True)
@@ -57,8 +57,8 @@ class CompatibilityResult:
     """Compatibility assessment between a candidate and the room environment."""
 
     candidate: CompanionCandidate
-    score: float                    # 0.0 – 1.0 (matched / assessed dimensions)
-    assessed_dimensions: int        # how many dimensions had enough data to compare
-    reasons: tuple[str, ...]        # human-readable match/mismatch explanations
+    score: float  # 0.0 – 1.0 (matched / assessed dimensions)
+    assessed_dimensions: int  # how many dimensions had enough data to compare
+    reasons: tuple[str, ...]  # human-readable match/mismatch explanations
     caution_notes: tuple[str, ...]  # safety warnings (toxicity, pets, children)
-    is_compatible: bool             # True when assessed_dimensions > 0 and score >= 0.5
+    is_compatible: bool  # True when assessed_dimensions > 0 and score >= 0.5

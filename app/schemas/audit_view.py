@@ -1,8 +1,9 @@
-"""Audit view schemas — TICKET-022.
+"""Audit view schemas — TICKET-022 + TICKET-032 + TICKET-034.
 
 ChatRunEvidenceView is the single response type for
 GET /chat-runs/{request_id}/evidence.  It is assembled from three existing
-tables (ChatRequest, LlmRun, EvidenceBundle) — no new tables required.
+tables (ChatRequest, LlmRun, EvidenceBundle) and, from TICKET-032,
+llm_self_healing_logs, and from TICKET-034, chat_evaluation_results.
 """
 
 from __future__ import annotations
@@ -27,6 +28,21 @@ class ChunkSummary(BaseModel):
     chunk_text: str
     similarity_score: float
     rank: int
+
+
+class HealingAttemptSummary(BaseModel):
+    attempt_number: int
+    passed: bool
+    failed_checks: list[str]
+    validation_errors: list[str]
+
+
+class EvaluationSummary(BaseModel):
+    ab_test_group: str
+    faithfulness: float
+    answer_relevance: float
+    ground_truth_similarity: float
+    matched_ground_truth_id: uuid.UUID | None
 
 
 class ChatRunEvidenceView(BaseModel):
@@ -54,3 +70,7 @@ class ChatRunEvidenceView(BaseModel):
     retrieved_chunks: list[ChunkSummary]
     source_coverage: dict[str, bool]
     created_at: datetime
+    # Self-healing metadata — TICKET-032
+    healing_attempts: list[HealingAttemptSummary] = []
+    # Evaluation metadata — TICKET-034 (None when evaluation step was skipped)
+    evaluation: EvaluationSummary | None = None

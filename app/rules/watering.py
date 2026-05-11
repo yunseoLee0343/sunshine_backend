@@ -28,9 +28,7 @@ def evaluate(
     care_logs: list[RecentCareLog],
 ) -> RuleResult:
     soil = snapshot.soil_moisture_avg_pct
-    water_min = (
-        float(thresholds.water_min_pct) if thresholds.water_min_pct is not None else None
-    )
+    water_min = float(thresholds.water_min_pct) if thresholds.water_min_pct is not None else None
 
     if soil is None or water_min is None:
         return RuleResult(
@@ -43,8 +41,7 @@ def evaluate(
         )
 
     recently_watered = any(
-        log.action_type == _WATERING_ACTION_TYPE and log.hours_ago <= _WATERING_WINDOW_H
-        for log in care_logs
+        log.action_type == _WATERING_ACTION_TYPE and log.hours_ago <= _WATERING_WINDOW_H for log in care_logs
     )
 
     if soil < water_min:

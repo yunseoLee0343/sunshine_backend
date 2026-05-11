@@ -29,9 +29,7 @@ from app.schemas.plants import CharacterBlock, PlantCard, SpeciesBlock
 # Helpers
 # ---------------------------------------------------------------------------
 
-_SPECIES = SpeciesBlock(
-    korean_name="몬스테라", scientific_name="Monstera deliciosa", common_name="Monstera"
-)
+_SPECIES = SpeciesBlock(korean_name="몬스테라", scientific_name="Monstera deliciosa", common_name="Monstera")
 _CHARACTER = CharacterBlock(
     mood="neutral",
     expression="normal",
@@ -71,9 +69,7 @@ async def _get(
     params: dict | None = None,
     headers: dict | None = None,
 ) -> tuple[int, dict]:
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as c:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         r = await c.get(path, params=params or {}, headers=headers or {})
     return r.status_code, r.json()
 
@@ -83,9 +79,7 @@ async def _post(
     body: dict,
     headers: dict | None = None,
 ) -> tuple[int, dict]:
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as c:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         r = await c.post(path, json=body, headers=headers or {})
     return r.status_code, r.json()
 
@@ -151,9 +145,7 @@ def test_get_plant_with_header_returns_200() -> None:
     card = _make_card(owner, plant_id)
 
     with patch(f"{_SVC}.get_plant", new=AsyncMock(return_value=card)):
-        status, _ = asyncio.run(
-            _get(f"/plants/{plant_id}", headers={"X-User-Id": str(owner)})
-        )
+        status, _ = asyncio.run(_get(f"/plants/{plant_id}", headers={"X-User-Id": str(owner)}))
     assert status == 200
 
 
@@ -165,9 +157,7 @@ def test_get_plant_header_user_id_is_passed_to_service() -> None:
 
     mock = AsyncMock(return_value=card)
     with patch(f"{_SVC}.get_plant", new=mock):
-        asyncio.run(
-            _get(f"/plants/{plant_id}", headers={"X-User-Id": str(owner)})
-        )
+        asyncio.run(_get(f"/plants/{plant_id}", headers={"X-User-Id": str(owner)}))
 
     # call_args positional: (plant_id, user_id) — self is not captured by AsyncMock patch
     called_plant_id, called_user_id = mock.call_args[0]
@@ -187,9 +177,7 @@ def test_get_plant_header_cross_user_returns_403() -> None:
         return _make_card(owner, p_id)
 
     with patch(f"{_SVC}.get_plant", new=_ownership_aware):
-        status, body = asyncio.run(
-            _get(f"/plants/{plant_id}", headers={"X-User-Id": str(attacker)})
-        )
+        status, body = asyncio.run(_get(f"/plants/{plant_id}", headers={"X-User-Id": str(attacker)}))
     assert status == 403
     assert body["detail"] == "forbidden"
 
@@ -229,9 +217,7 @@ def test_get_plant_header_wins_over_query_param() -> None:
 def test_list_plants_with_header_returns_200() -> None:
     uid = uuid.uuid4()
     with patch(f"{_SVC}.list_plants", new=AsyncMock(return_value=[])):
-        status, _ = asyncio.run(
-            _get("/plants", headers={"X-User-Id": str(uid)})
-        )
+        status, _ = asyncio.run(_get("/plants", headers={"X-User-Id": str(uid)}))
     assert status == 200
 
 

@@ -80,6 +80,7 @@ def _render_system_prompt(ctx: ForwardContext, guardrails: list[str]) -> str:
 
     parts.append(_ROLE_HEADER)
     parts.append(_render_context(ctx))
+    parts.append(_render_visual_facts(ctx))
     parts.append(_render_rule_section(ctx))
     parts.append(_render_knowledge_section(ctx))
     parts.append(_ANSWER_FORMAT)
@@ -138,8 +139,8 @@ _GUARDRAIL_UNKNOWN = """\
 
 _GUARDRAIL_MAP = {
     _GR_RULE_AUTHORITY: _GUARDRAIL_RULE_AUTHORITY,
-    _GR_PEST:           _GUARDRAIL_PEST,
-    _GR_UNKNOWN:        _GUARDRAIL_UNKNOWN,
+    _GR_PEST: _GUARDRAIL_PEST,
+    _GR_UNKNOWN: _GUARDRAIL_UNKNOWN,
 }
 
 
@@ -189,6 +190,15 @@ def _render_context(ctx: ForwardContext) -> str:
     return "\n".join(lines)
 
 
+def _render_visual_facts(ctx: ForwardContext) -> str:
+    if not ctx.visual_facts:
+        return ""
+    lines: list[str] = ["## 시각적 관찰 결과 (이미지 분석)"]
+    for fact in ctx.visual_facts:
+        lines.append(f"- {fact}")
+    return "\n".join(lines)
+
+
 def _render_rule_section(ctx: ForwardContext) -> str:
     lines: list[str] = ["## 룰 엔진 분석 결과"]
     lines.append(f"- 주요 조치(primary_action): {ctx.rule_primary_action}")
@@ -232,8 +242,7 @@ def _render_knowledge_section(ctx: ForwardContext) -> str:
 
 def _render_chunk(chunk: ChunkEvidence) -> str:
     return (
-        f"\n[청크 #{chunk.rank} | 종류: {chunk.chunk_kind} "
-        f"| 유사도: {chunk.similarity_score:.4f}]\n{chunk.chunk_text}"
+        f"\n[청크 #{chunk.rank} | 종류: {chunk.chunk_kind} | 유사도: {chunk.similarity_score:.4f}]\n{chunk.chunk_text}"
     )
 
 

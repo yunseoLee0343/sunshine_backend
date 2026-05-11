@@ -240,6 +240,8 @@ async def chat_care_answer(
             user_id=effective_uid,
             question=req.question,
             request_id=req.request_id,
+            image_uri=req.image_uri,
+            audio_uri=req.audio_uri,
         )
         await session.commit()
         return resp

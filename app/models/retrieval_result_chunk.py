@@ -13,9 +13,7 @@ class RetrievalResultChunk(Base):
     __tablename__ = "retrieval_result_chunks"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    run_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("retrieval_runs.id", ondelete="CASCADE"), nullable=False
-    )
+    run_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("retrieval_runs.id", ondelete="CASCADE"), nullable=False)
     rank: Mapped[int] = mapped_column(Integer, nullable=False)
     chunk_document_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
     plant_knowledge_id: Mapped[uuid.UUID] = mapped_column(nullable=False)

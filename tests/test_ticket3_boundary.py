@@ -34,9 +34,7 @@ FORBIDDEN_DIRS = [
 
 @pytest.mark.parametrize("forbidden_dir", FORBIDDEN_DIRS)
 def test_forbidden_directory_absent(forbidden_dir: str) -> None:
-    assert not (ROOT / forbidden_dir).exists(), (
-        f"Forbidden directory exists: {forbidden_dir}"
-    )
+    assert not (ROOT / forbidden_dir).exists(), f"Forbidden directory exists: {forbidden_dir}"
 
 
 # ---------------------------------------------------------------------------
@@ -50,11 +48,7 @@ def test_vision_dir_exists_for_ticket3() -> None:
 
 def test_vision_dir_only_contains_allowed_modules() -> None:
     allowed = {"__init__.py", "species_classifier.py", "mock_species_classifier.py"}
-    actual = {
-        p.name
-        for p in (APP_DIR / "vision").iterdir()
-        if p.is_file() and p.suffix == ".py"
-    }
+    actual = {p.name for p in (APP_DIR / "vision").iterdir() if p.is_file() and p.suffix == ".py"}
     extra = actual - allowed
     assert not extra, f"Unexpected files under app/vision: {extra}"
 
@@ -78,9 +72,7 @@ FORBIDDEN_FILES = [
 
 @pytest.mark.parametrize("forbidden_file", FORBIDDEN_FILES)
 def test_forbidden_file_absent(forbidden_file: str) -> None:
-    assert not (ROOT / forbidden_file).exists(), (
-        f"Forbidden file exists: {forbidden_file}"
-    )
+    assert not (ROOT / forbidden_file).exists(), f"Forbidden file exists: {forbidden_file}"
 
 
 # ---------------------------------------------------------------------------
@@ -142,9 +134,7 @@ _APP_IMPORTS = _collect_imports(_APP_SOURCE)
 
 @pytest.mark.parametrize("lib", FORBIDDEN_LIBS)
 def test_forbidden_library_not_imported(lib: str) -> None:
-    assert lib not in _APP_IMPORTS, (
-        f"Forbidden library '{lib}' is imported in app source"
-    )
+    assert lib not in _APP_IMPORTS, f"Forbidden library '{lib}' is imported in app source"
 
 
 def test_forbidden_libs_not_in_sys_modules_after_app_import() -> None:
@@ -186,9 +176,7 @@ FORBIDDEN_IO_PATTERNS = [
 
 @pytest.mark.parametrize("pattern", FORBIDDEN_IO_PATTERNS)
 def test_no_image_io_call_patterns(pattern: str) -> None:
-    assert pattern not in _APP_SOURCE, (
-        f"Forbidden image-IO call pattern '{pattern}' found in app source"
-    )
+    assert pattern not in _APP_SOURCE, f"Forbidden image-IO call pattern '{pattern}' found in app source"
 
 
 # ---------------------------------------------------------------------------
@@ -207,9 +195,7 @@ FORBIDDEN_SYMBOLS = [
 
 @pytest.mark.parametrize("symbol", FORBIDDEN_SYMBOLS)
 def test_no_forbidden_symbol(symbol: str) -> None:
-    assert symbol not in _APP_SOURCE, (
-        f"Forbidden symbol '{symbol}' found in app source"
-    )
+    assert symbol not in _APP_SOURCE, f"Forbidden symbol '{symbol}' found in app source"
 
 
 # ---------------------------------------------------------------------------
@@ -241,9 +227,7 @@ def test_pyproject_does_not_declare_forbidden_deps() -> None:
     ]
     for dep in forbidden_deps:
         # Match as a quoted dependency entry (e.g. "torch>=" or "torch")
-        assert f'"{dep}' not in pyproject, (
-            f"Forbidden dependency '{dep}' declared in pyproject.toml"
-        )
+        assert f'"{dep}' not in pyproject, f"Forbidden dependency '{dep}' declared in pyproject.toml"
 
 
 # ---------------------------------------------------------------------------
@@ -264,14 +248,10 @@ def test_healthz_unchanged_no_vision_or_db_check() -> None:
             healthz_lines.append(line)
     body = "\n".join(healthz_lines)
     for forbidden in ("check_db", "classifier", "vision", "model"):
-        assert forbidden not in body, (
-            f"/healthz must not reference '{forbidden}'"
-        )
+        assert forbidden not in body, f"/healthz must not reference '{forbidden}'"
 
 
 def test_readyz_does_not_check_vision_or_model() -> None:
     main_src = (APP_DIR / "main.py").read_text(encoding="utf-8").lower()
     for forbidden in ("classifier", "vision", "model_files", '"model":', '"vision":'):
-        assert forbidden not in main_src, (
-            f"/readyz / main.py must not reference '{forbidden}'"
-        )
+        assert forbidden not in main_src, f"/readyz / main.py must not reference '{forbidden}'"

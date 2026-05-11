@@ -18,9 +18,7 @@ class SensorRepository:
         self.session = session
 
     async def find_by_reading_id(self, reading_id: str) -> SensorReading | None:
-        result = await self.session.execute(
-            select(SensorReading).where(SensorReading.reading_id == reading_id)
-        )
+        result = await self.session.execute(select(SensorReading).where(SensorReading.reading_id == reading_id))
         return result.scalar_one_or_none()
 
     async def insert(

@@ -11,8 +11,18 @@ from app.services.evidence_builder import EvidenceBuilderService, PlantNotFoundE
 router = APIRouter(prefix="/evidence", tags=["evidence"])
 
 
-@router.post("/build", response_model=EvidenceBundleResponse)
+@router.post("/build", response_model=EvidenceBundleResponse, summary="Build evidence bundle (internal)")
 async def build_evidence(body: EvidenceBuildRequest) -> EvidenceBundleResponse:
+    """Build and cache the evidence bundle for a plant-care question.
+
+    An evidence bundle is the fully assembled context object that feeds the LLM
+    prompt: character state, environment snapshot, rule engine facts, and RAG
+    retrieved chunks.  Idempotent — a cached bundle is returned when the
+    `evidence_hash` matches an existing record.
+
+    This endpoint is called internally by the chat orchestrator and is exposed
+    here for debugging and integration testing only.
+    """
     async with AsyncSessionLocal() as session:
         svc = EvidenceBuilderService(session)
         try:

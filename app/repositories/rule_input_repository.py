@@ -37,9 +37,7 @@ class RuleInputRepository:
             temperature_max_c=row.temperature_max_c,
         )
 
-    async def get_latest_snapshot(
-        self, plant_id: uuid.UUID, before: datetime
-    ) -> LatestSnapshot | None:
+    async def get_latest_snapshot(self, plant_id: uuid.UUID, before: datetime) -> LatestSnapshot | None:
         result = await self.session.execute(
             select(EnvironmentSnapshot)
             .where(
@@ -54,21 +52,13 @@ class RuleInputRepository:
         if row is None:
             return None
         return LatestSnapshot(
-            soil_moisture_avg_pct=float(row.soil_moisture_avg_pct)
-            if row.soil_moisture_avg_pct is not None
-            else None,
+            soil_moisture_avg_pct=float(row.soil_moisture_avg_pct) if row.soil_moisture_avg_pct is not None else None,
             light_avg_lux=float(row.light_avg_lux) if row.light_avg_lux is not None else None,
-            humidity_avg_pct=float(row.humidity_avg_pct)
-            if row.humidity_avg_pct is not None
-            else None,
-            temperature_avg_c=float(row.temperature_avg_c)
-            if row.temperature_avg_c is not None
-            else None,
+            humidity_avg_pct=float(row.humidity_avg_pct) if row.humidity_avg_pct is not None else None,
+            temperature_avg_c=float(row.temperature_avg_c) if row.temperature_avg_c is not None else None,
         )
 
-    async def get_recent_care_logs(
-        self, plant_id: uuid.UUID, since: datetime, now: datetime
-    ) -> list[RecentCareLog]:
+    async def get_recent_care_logs(self, plant_id: uuid.UUID, since: datetime, now: datetime) -> list[RecentCareLog]:
         result = await self.session.execute(
             select(CareLog).where(
                 CareLog.plant_id == plant_id,

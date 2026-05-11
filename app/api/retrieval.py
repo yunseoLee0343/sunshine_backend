@@ -11,8 +11,15 @@ from app.services.retrieval_service import RetrievalService
 router = APIRouter(prefix="/retrieval", tags=["retrieval"])
 
 
-@router.post("/query", response_model=RetrievalResponse)
+@router.post("/query", response_model=RetrievalResponse, summary="Hybrid knowledge retrieval")
 async def query_retrieval(body: RetrievalRequest) -> RetrievalResponse:
+    """Run hybrid retrieval (vector similarity + BM25 keyword) over plant knowledge chunks.
+
+    Results are ranked by a weighted combination of semantic and keyword scores.
+    The run is persisted for audit purposes and is idempotent on `request_id`.
+    Intended for integration testing; the `/plants/{plant_id}/chat` endpoint
+    calls this internally as part of the RAG pipeline.
+    """
     async with AsyncSessionLocal() as session:
         svc = RetrievalService(session)
         run = await svc.query(body)

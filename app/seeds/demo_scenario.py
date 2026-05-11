@@ -40,7 +40,6 @@ from app.seeds.demo_seed import (
     DEMO_USER_ID,
 )
 
-
 # ---------------------------------------------------------------------------
 # Step result
 # ---------------------------------------------------------------------------
@@ -97,8 +96,7 @@ async def _step3_species_thresholds(session: AsyncSession) -> ScenarioStep:
         and sp.temperature_min_c is not None
     )
     detail = (
-        f"water {sp.water_min_pct}–{sp.water_max_pct}%, "
-        f"light {sp.light_min_lux}–{sp.light_max_lux} lux"
+        f"water {sp.water_min_pct}–{sp.water_max_pct}%, light {sp.light_min_lux}–{sp.light_max_lux} lux"
         if passed and sp is not None
         else "몬스테라 종 프로필 없음 또는 임계값 미설정."
     )
@@ -135,9 +133,7 @@ async def _step6_sensor_readings(session: AsyncSession) -> ScenarioStep:
     from app.models.sensor_reading import SensorReading
 
     count_row = await session.execute(
-        select(func.count()).select_from(SensorReading).where(
-            SensorReading.plant_id == DEMO_PLANT_ID
-        )
+        select(func.count()).select_from(SensorReading).where(SensorReading.plant_id == DEMO_PLANT_ID)
     )
     count = count_row.scalar_one()
     passed = count >= 24
@@ -163,9 +159,7 @@ async def _step7_snapshot_exists(session: AsyncSession) -> ScenarioStep:
     snap = result.scalar_one_or_none()
     passed = snap is not None
     detail = (
-        f"window=1h, soil_moisture={snap.soil_moisture_avg_pct}%"
-        if passed and snap is not None
-        else "1h 스냅샷 없음."
+        f"window=1h, soil_moisture={snap.soil_moisture_avg_pct}%" if passed and snap is not None else "1h 스냅샷 없음."
     )
     return ScenarioStep(step=7, description="최신 환경 스냅샷 존재 (1h window)", passed=passed, detail=detail)
 

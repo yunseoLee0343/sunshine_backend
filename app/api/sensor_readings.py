@@ -16,11 +16,22 @@ async def get_session():
         yield session
 
 
-@router.post("", response_model=SensorReadingResponse)
+@router.post(
+    "",
+    response_model=SensorReadingResponse,
+    summary="Ingest sensor reading",
+)
 async def create_sensor_reading(
     req: SensorReadingRequest,
     session: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
+    """Ingest a single sensor reading for a plant device.
+
+    Accepted metrics: `soil_moisture_pct`, `light_lux`, `humidity_pct`,
+    `temperature_c`. Unknown metrics are recorded as `ignored`.
+    The snapshot aggregation service rolls up readings into hourly windows
+    separately — this endpoint only persists the raw row.
+    """
     svc = SensorIngestService(session)
     response, status_code = await svc.ingest(req)
     return JSONResponse(content=response.model_dump(), status_code=status_code)

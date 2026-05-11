@@ -72,12 +72,8 @@ async def test_multiple_updates_append_multiple_rows() -> None:
     base = datetime.now(UTC)
 
     await repo.create(_make_row(plant_id, eng.map("onboarding_created"), base))
-    await repo.create(
-        _make_row(plant_id, eng.map("low_soil_moisture"), base + timedelta(seconds=1))
-    )
-    await repo.create(
-        _make_row(plant_id, eng.map("after_watering"), base + timedelta(seconds=2))
-    )
+    await repo.create(_make_row(plant_id, eng.map("low_soil_moisture"), base + timedelta(seconds=1)))
+    await repo.create(_make_row(plant_id, eng.map("after_watering"), base + timedelta(seconds=2)))
 
     assert len(session.rows) == 3
     # Append-only: the original "onboarding_created" row is still present.
@@ -106,9 +102,7 @@ async def test_create_does_not_mutate_existing_rows() -> None:
         first.created_at,
     )
 
-    await repo.create(
-        _make_row(plant_id, eng.map("low_light"), base + timedelta(seconds=1))
-    )
+    await repo.create(_make_row(plant_id, eng.map("low_light"), base + timedelta(seconds=1)))
 
     after = (
         first.id,

@@ -12,7 +12,6 @@ from app.schemas.chat_answer import ChatAnswerResponse, ParsedAnswer
 from app.services.chat_orchestrator import ChatOrchestrator
 from app.services.response_parser import parse_answer
 
-
 # ---------------------------------------------------------------------------
 # ResponseParser
 # ---------------------------------------------------------------------------
@@ -85,9 +84,7 @@ def _make_session() -> MagicMock:
     return session
 
 
-def _make_forward_context(
-    plant_id: uuid.UUID, user_id: uuid.UUID, question: str
-) -> MagicMock:
+def _make_forward_context(plant_id: uuid.UUID, user_id: uuid.UUID, question: str) -> MagicMock:
     from app.domain.evidence import ForwardContext
 
     ctx = MagicMock(spec=ForwardContext)
@@ -122,12 +119,7 @@ def _make_llm_response(request_id: uuid.UUID, content: str):
     )
 
 
-_SAMPLE_CONTENT = (
-    "[결론] 물주기 필요\n\n"
-    "[근거] 토양 수분 부족\n\n"
-    "[행동] 지금 물을 주세요\n\n"
-    "[주의] 과습 주의"
-)
+_SAMPLE_CONTENT = "[결론] 물주기 필요\n\n[근거] 토양 수분 부족\n\n[행동] 지금 물을 주세요\n\n[주의] 과습 주의"
 
 
 # ---------------------------------------------------------------------------
@@ -221,9 +213,7 @@ async def test_orchestrator_parsed_sections() -> None:
         patch("app.services.chat_orchestrator._LLM_CLIENT") as mock_llm,
     ):
         mock_cls.classify.return_value = ("watering_question", 0.95, "rule")
-        mock_ret_cls.return_value.query = AsyncMock(
-            return_value=MagicMock(request_id=uuid.uuid4())
-        )
+        mock_ret_cls.return_value.query = AsyncMock(return_value=MagicMock(request_id=uuid.uuid4()))
         mock_ev_cls.return_value.build = AsyncMock(return_value=(ctx, False))
 
         from app.domain.prompt_build_result import PromptBuildResult
@@ -275,9 +265,7 @@ async def test_orchestrator_persists_chat_request_and_llm_run() -> None:
         patch("app.services.chat_orchestrator._LLM_CLIENT") as mock_llm,
     ):
         mock_cls.classify.return_value = ("watering_question", 0.95, "rule")
-        mock_ret_cls.return_value.query = AsyncMock(
-            return_value=MagicMock(request_id=uuid.uuid4())
-        )
+        mock_ret_cls.return_value.query = AsyncMock(return_value=MagicMock(request_id=uuid.uuid4()))
         mock_ev_cls.return_value.build = AsyncMock(return_value=(ctx, False))
 
         from app.domain.prompt_build_result import PromptBuildResult
@@ -300,11 +288,13 @@ async def test_orchestrator_persists_chat_request_and_llm_run() -> None:
 
     from app.models.chat_request import ChatRequest
     from app.models.llm_run import LlmRun
+    from app.models.llm_self_healing_log import LlmSelfHealingLog
 
-    assert session.add.call_count == 2
+    assert session.add.call_count >= 2
     added_types = [type(call.args[0]) for call in session.add.call_args_list]
     assert ChatRequest in added_types
     assert LlmRun in added_types
+    assert LlmSelfHealingLog in added_types
 
 
 @pytest.mark.asyncio
@@ -332,9 +322,7 @@ async def test_orchestrator_llm_run_profile_is_chat_orchestrator() -> None:
         patch("app.services.chat_orchestrator._LLM_CLIENT") as mock_llm,
     ):
         mock_cls.classify.return_value = ("watering_question", 0.95, "rule")
-        mock_ret_cls.return_value.query = AsyncMock(
-            return_value=MagicMock(request_id=uuid.uuid4())
-        )
+        mock_ret_cls.return_value.query = AsyncMock(return_value=MagicMock(request_id=uuid.uuid4()))
         mock_ev_cls.return_value.build = AsyncMock(return_value=(ctx, False))
 
         from app.domain.prompt_build_result import PromptBuildResult
@@ -357,11 +345,7 @@ async def test_orchestrator_llm_run_profile_is_chat_orchestrator() -> None:
 
     from app.models.llm_run import LlmRun
 
-    llm_run_calls = [
-        call.args[0]
-        for call in session.add.call_args_list
-        if isinstance(call.args[0], LlmRun)
-    ]
+    llm_run_calls = [call.args[0] for call in session.add.call_args_list if isinstance(call.args[0], LlmRun)]
     assert len(llm_run_calls) == 1
     assert llm_run_calls[0].profile == "chat_orchestrator"
 
@@ -391,9 +375,7 @@ async def test_orchestrator_tokens_echoed_in_response() -> None:
         patch("app.services.chat_orchestrator._LLM_CLIENT") as mock_llm,
     ):
         mock_cls.classify.return_value = ("watering_question", 0.95, "rule")
-        mock_ret_cls.return_value.query = AsyncMock(
-            return_value=MagicMock(request_id=uuid.uuid4())
-        )
+        mock_ret_cls.return_value.query = AsyncMock(return_value=MagicMock(request_id=uuid.uuid4()))
         mock_ev_cls.return_value.build = AsyncMock(return_value=(ctx, False))
 
         from app.domain.prompt_build_result import PromptBuildResult
@@ -508,9 +490,7 @@ async def test_orchestrator_retrieval_failure_continues() -> None:
         mock_cls.classify.return_value = ("light_question", 0.9, "rule")
 
         # Retrieval raises exception
-        mock_ret_cls.return_value.query = AsyncMock(
-            side_effect=RuntimeError("retrieval failed")
-        )
+        mock_ret_cls.return_value.query = AsyncMock(side_effect=RuntimeError("retrieval failed"))
 
         mock_ev_cls.return_value.build = AsyncMock(return_value=(ctx, False))
 
@@ -565,12 +545,8 @@ async def test_orchestrator_plant_not_found_raises() -> None:
         patch("app.services.chat_orchestrator._LLM_CLIENT"),
     ):
         mock_cls.classify.return_value = ("watering_question", 0.9, "rule")
-        mock_ret_cls.return_value.query = AsyncMock(
-            return_value=MagicMock(request_id=uuid.uuid4())
-        )
-        mock_ev_cls.return_value.build = AsyncMock(
-            side_effect=PlantNotFoundError("plant not found")
-        )
+        mock_ret_cls.return_value.query = AsyncMock(return_value=MagicMock(request_id=uuid.uuid4()))
+        mock_ev_cls.return_value.build = AsyncMock(side_effect=PlantNotFoundError("plant not found"))
 
         with pytest.raises(PlantNotFoundError):
             await orchestrator.run(
@@ -667,9 +643,7 @@ async def test_orchestrator_guardrails_in_response() -> None:
         patch("app.services.chat_orchestrator._LLM_CLIENT") as mock_llm,
     ):
         mock_cls.classify.return_value = ("pest_reference_question", 0.85, "rule")
-        mock_ret_cls.return_value.query = AsyncMock(
-            return_value=MagicMock(request_id=uuid.uuid4())
-        )
+        mock_ret_cls.return_value.query = AsyncMock(return_value=MagicMock(request_id=uuid.uuid4()))
         mock_ev_cls.return_value.build = AsyncMock(return_value=(ctx, False))
 
         from app.domain.prompt_build_result import PromptBuildResult
@@ -700,13 +674,11 @@ async def test_orchestrator_guardrails_in_response() -> None:
 
 
 def test_intent_rag_layer_mapping_coverage() -> None:
-    from app.services.chat_orchestrator import _INTENT_TO_RAG_LAYERS
     from app.schemas.chat_intent import ROUTING_TABLE
+    from app.services.chat_orchestrator import _INTENT_TO_RAG_LAYERS
 
     for intent in ROUTING_TABLE:
-        assert intent in _INTENT_TO_RAG_LAYERS, (
-            f"Intent '{intent}' missing from _INTENT_TO_RAG_LAYERS"
-        )
+        assert intent in _INTENT_TO_RAG_LAYERS, f"Intent '{intent}' missing from _INTENT_TO_RAG_LAYERS"
 
 
 def test_companion_intent_has_empty_rag_layers() -> None:

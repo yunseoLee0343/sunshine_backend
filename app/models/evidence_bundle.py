@@ -12,9 +12,7 @@ from app.db.base import Base
 
 class EvidenceBundle(Base):
     __tablename__ = "evidence_bundles"
-    __table_args__ = (
-        UniqueConstraint("evidence_hash", name="uq_evidence_bundle_hash"),
-    )
+    __table_args__ = (UniqueConstraint("evidence_hash", name="uq_evidence_bundle_hash"),)
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     evidence_hash: Mapped[str] = mapped_column(Text, nullable=False)

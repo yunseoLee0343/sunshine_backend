@@ -70,17 +70,19 @@ class RetrievalService:
         await self.session.flush()
 
         for r in results:
-            self.session.add(RetrievalResultChunk(
-                id=uuid.uuid4(),
-                run_id=req.request_id,
-                rank=r.rank,
-                chunk_document_id=r.chunk_document_id,
-                plant_knowledge_id=r.plant_knowledge_id,
-                chunk_kind=r.chunk_kind,
-                chunk_text=r.chunk_text,
-                similarity_score=r.similarity_score,
-                created_at=now,
-            ))
+            self.session.add(
+                RetrievalResultChunk(
+                    id=uuid.uuid4(),
+                    run_id=req.request_id,
+                    rank=r.rank,
+                    chunk_document_id=r.chunk_document_id,
+                    plant_knowledge_id=r.plant_knowledge_id,
+                    chunk_kind=r.chunk_kind,
+                    chunk_text=r.chunk_text,
+                    similarity_score=r.similarity_score,
+                    created_at=now,
+                )
+            )
         await self.session.flush()
 
         return RetrievalRunResult(

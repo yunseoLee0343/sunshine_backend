@@ -26,9 +26,7 @@ class PlantRepository:
         result = await self.session.execute(select(Plant).where(Plant.user_id == user_id))
         return list(result.scalars().all())
 
-    async def get_by_id_and_user(
-        self, plant_id: uuid.UUID, user_id: uuid.UUID
-    ) -> Plant | None:
+    async def get_by_id_and_user(self, plant_id: uuid.UUID, user_id: uuid.UUID) -> Plant | None:
         """Return plant only if it belongs to the requesting user."""
         result = await self.session.execute(
             select(Plant).where(

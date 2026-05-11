@@ -243,9 +243,7 @@ async def test_chat_idempotent_returns_from_cache(client: AsyncClient) -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_audit_evidence_returns_200_and_matches_request_id(
-    client: AsyncClient, watering_resp: dict
-) -> None:
+async def test_audit_evidence_returns_200_and_matches_request_id(client: AsyncClient, watering_resp: dict) -> None:
     request_id = watering_resp["request_id"]
     r = await client.get(f"/chat-runs/{request_id}/evidence")
     assert r.status_code == 200

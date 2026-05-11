@@ -18,4 +18,4 @@ class RuleEngineResult(BaseModel):
     severity: Severity
     reason_codes: list[str]
     evidence_facts: dict[str, object]
-    rule_results: list[dict]       # per-rule breakdown for traceability
+    rule_results: list[dict]  # per-rule breakdown for traceability

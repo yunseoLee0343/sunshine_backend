@@ -23,12 +23,8 @@ def evaluate(
     care_logs: list[RecentCareLog],  # noqa: ARG001 — not used for light
 ) -> RuleResult:
     lux = snapshot.light_avg_lux
-    light_min = (
-        float(thresholds.light_min_lux) if thresholds.light_min_lux is not None else None
-    )
-    light_max = (
-        float(thresholds.light_max_lux) if thresholds.light_max_lux is not None else None
-    )
+    light_min = float(thresholds.light_min_lux) if thresholds.light_min_lux is not None else None
+    light_max = float(thresholds.light_max_lux) if thresholds.light_max_lux is not None else None
 
     if lux is None or light_min is None:
         return RuleResult(

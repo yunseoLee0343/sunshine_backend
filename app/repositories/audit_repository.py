@@ -22,12 +22,16 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.chat_evaluation import ChatEvaluationResult
 from app.models.chat_request import ChatRequest
 from app.models.evidence_bundle import EvidenceBundle
 from app.models.llm_run import LlmRun
+from app.models.llm_self_healing_log import LlmSelfHealingLog
 from app.schemas.audit_view import (
     ChatRunEvidenceView,
     ChunkSummary,
+    EvaluationSummary,
+    HealingAttemptSummary,
     SnapshotSummary,
 )
 
@@ -38,20 +42,14 @@ class AuditRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def get_chat_run_evidence(
-        self, request_id: uuid.UUID
-    ) -> ChatRunEvidenceView | None:
+    async def get_chat_run_evidence(self, request_id: uuid.UUID) -> ChatRunEvidenceView | None:
         # 1. ChatRequest — not found → 404
         chat = await self.session.get(ChatRequest, request_id)
         if chat is None:
             return None
 
         # 2. LlmRun — one per request_id in normal and companion paths
-        result = await self.session.execute(
-            select(LlmRun)
-            .where(LlmRun.request_id == request_id)
-            .limit(1)
-        )
+        result = await self.session.execute(select(LlmRun).where(LlmRun.request_id == request_id).limit(1))
         llm_run = result.scalar_one_or_none()
 
         # 3. EvidenceBundle — skipped for companion (no evidence pipeline)
@@ -69,7 +67,24 @@ class AuditRepository:
             )
             bundle = result.scalar_one_or_none()
 
-        return _assemble(chat, llm_run, bundle)
+        # 4. Self-healing logs (TICKET-032) — ordered by attempt_number
+        healing_result = await self.session.execute(
+            select(LlmSelfHealingLog)
+            .where(LlmSelfHealingLog.request_id == request_id)
+            .order_by(LlmSelfHealingLog.attempt_number)
+        )
+        healing_logs = list(healing_result.scalars().all())
+
+        # 5. Evaluation result (TICKET-034) — latest row if present
+        eval_result_row = await self.session.execute(
+            select(ChatEvaluationResult)
+            .where(ChatEvaluationResult.request_id == request_id)
+            .order_by(ChatEvaluationResult.created_at.desc())
+            .limit(1)
+        )
+        eval_row = eval_result_row.scalar_one_or_none()
+
+        return _assemble(chat, llm_run, bundle, healing_logs, eval_row)
 
 
 # ---------------------------------------------------------------------------
@@ -88,7 +103,10 @@ def _assemble(
     chat: ChatRequest,
     llm_run: LlmRun | None,
     bundle: EvidenceBundle | None,
+    healing_logs: list[LlmSelfHealingLog] | None = None,
+    eval_row: ChatEvaluationResult | None = None,
 ) -> ChatRunEvidenceView:
+    healing_logs = healing_logs or []
     prompt_text = (llm_run.prompt_text or "") if llm_run else ""
     prompt_hash = (llm_run.prompt_hash or "") if llm_run else ""
 
@@ -118,6 +136,28 @@ def _assemble(
         for c in bj.get("retrieved_chunks", [])
     ]
 
+    healing_attempts = [
+        HealingAttemptSummary(
+            attempt_number=log.attempt_number,
+            passed=log.passed,
+            failed_checks=list(log.failed_checks or []),
+            validation_errors=list(log.validation_errors or []),
+        )
+        for log in healing_logs
+    ]
+
+    evaluation = (
+        EvaluationSummary(
+            ab_test_group=eval_row.ab_test_group,
+            faithfulness=eval_row.faithfulness,
+            answer_relevance=eval_row.answer_relevance,
+            ground_truth_similarity=eval_row.ground_truth_similarity,
+            matched_ground_truth_id=eval_row.matched_ground_truth_id,
+        )
+        if eval_row is not None
+        else None
+    )
+
     return ChatRunEvidenceView(
         request_id=chat.id,
         plant_id=chat.plant_id,
@@ -140,4 +180,6 @@ def _assemble(
         retrieved_chunks=chunks,
         source_coverage=dict(bj.get("source_coverage", {})),
         created_at=chat.created_at,
+        healing_attempts=healing_attempts,
+        evaluation=evaluation,
     )

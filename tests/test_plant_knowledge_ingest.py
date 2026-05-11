@@ -3,23 +3,19 @@
 from __future__ import annotations
 
 import hashlib
-import io
 import uuid
-from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.domain.plant_knowledge import IngestSummary, PlantKnowledgeRow
+from app.domain.plant_knowledge import IngestSummary
 from app.services.plant_knowledge_ingest_service import (
-    COLUMN_MAP,
     _bool_from_text,
     _build_col_index,
     _parse_pest_terms,
     _row_hash,
     _str,
 )
-
 
 # ---------------------------------------------------------------------------
 # Pure helper functions
@@ -61,7 +57,7 @@ def test_parse_pest_terms_newline_delimiter() -> None:
 
 def test_row_hash_is_sha256_hex() -> None:
     h = _row_hash(["a", "b", None])
-    expected = hashlib.sha256("a|b|".encode()).hexdigest()
+    expected = hashlib.sha256(b"a|b|").hexdigest()
     assert h == expected
 
 
@@ -120,6 +116,7 @@ def test_ingest_summary_defaults() -> None:
 
 def test_service_does_not_import_pgvector() -> None:
     import app.services.plant_knowledge_ingest_service as mod
+
     src = open(mod.__file__, encoding="utf-8").read()
     for forbidden in ("pgvector", "embedding", "openai", "anthropic", "torch"):
         assert forbidden not in src, f"Forbidden: {forbidden!r} in service"
@@ -247,15 +244,15 @@ async def test_process_row_raises_when_no_nongsaro_id() -> None:
 
 def test_migration_file_exists() -> None:
     from pathlib import Path
+
     migration = Path("alembic/versions/0003_ticket14a_plant_knowledge_tables.py")
     assert migration.exists(), "Migration 0003 not found"
 
 
 def test_migration_has_upgrade_and_downgrade() -> None:
     from pathlib import Path
-    src = Path("alembic/versions/0003_ticket14a_plant_knowledge_tables.py").read_text(
-        encoding="utf-8"
-    )
+
+    src = Path("alembic/versions/0003_ticket14a_plant_knowledge_tables.py").read_text(encoding="utf-8")
     assert "def upgrade" in src
     assert "def downgrade" in src
     assert "plant_knowledge_entries" in src

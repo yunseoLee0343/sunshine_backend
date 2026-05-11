@@ -1,10 +1,10 @@
 """MQTT ingestion result schema — TICKET-006."""
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class IngestOutcome(str, Enum):
+class IngestOutcome(StrEnum):
     inserted = "inserted"
     duplicate_ignored = "duplicate_ignored"
     device_id_mismatch = "device_id_mismatch"

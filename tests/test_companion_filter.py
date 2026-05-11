@@ -6,9 +6,8 @@ import uuid
 
 import pytest
 
-from app.domain.companion import CompanionCandidate, CompatibilityResult, RoomEnvironment
+from app.domain.companion import CompanionCandidate, RoomEnvironment
 from app.services.companion_filter_service import filter_companions
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -107,8 +106,7 @@ def test_room_environment_all_none() -> None:
 
 
 def test_perfect_match_score_is_1() -> None:
-    c = _cand(light_min=500, light_max=2000, humi_min=40, humi_max=70,
-              temp_min=18, temp_max=28)
+    c = _cand(light_min=500, light_max=2000, humi_min=40, humi_max=70, temp_min=18, temp_max=28)
     env = _env(light=1000, humidity=55, temperature=23)
     results = filter_companions([c], env)
     assert results[0].score == 1.0
@@ -137,7 +135,7 @@ def test_perfect_match_reasons_contain_적합() -> None:
 
 def test_partial_match_two_thirds_score() -> None:
     # Light and humidity match, temperature out of range
-    c = _cand(temp_min=25, temp_max=35)          # room is 23°C → too cold
+    c = _cand(temp_min=25, temp_max=35)  # room is 23°C → too cold
     env = _env(light=1000, humidity=55, temperature=23)
     results = filter_companions([c], env)
     assert abs(results[0].score - 2 / 3) < 0.001
@@ -155,17 +153,20 @@ def test_partial_match_is_compatible_true() -> None:
 
 
 def test_no_match_score_is_0() -> None:
-    c = _cand(light_min=5000, light_max=10000,   # current: 1000 lux — too low
-              humi_min=80, humi_max=100,           # current: 55% — too low
-              temp_min=30, temp_max=40)            # current: 23°C — too cold
+    c = _cand(
+        light_min=5000,
+        light_max=10000,  # current: 1000 lux — too low
+        humi_min=80,
+        humi_max=100,  # current: 55% — too low
+        temp_min=30,
+        temp_max=40,
+    )  # current: 23°C — too cold
     results = filter_companions([c], _env(light=1000, humidity=55, temperature=23))
     assert results[0].score == 0.0
 
 
 def test_no_match_is_compatible_false() -> None:
-    c = _cand(light_min=5000, light_max=10000,
-              humi_min=80, humi_max=100,
-              temp_min=30, temp_max=40)
+    c = _cand(light_min=5000, light_max=10000, humi_min=80, humi_max=100, temp_min=30, temp_max=40)
     results = filter_companions([c], _env(light=1000, humidity=55, temperature=23))
     assert results[0].is_compatible is False
 
@@ -176,36 +177,31 @@ def test_no_match_is_compatible_false() -> None:
 
 
 def test_light_too_low_reason_mentions_부족() -> None:
-    c = _cand(light_min=3000, light_max=6000, humi_min=None, humi_max=None,
-              temp_min=None, temp_max=None)
+    c = _cand(light_min=3000, light_max=6000, humi_min=None, humi_max=None, temp_min=None, temp_max=None)
     results = filter_companions([c], _env(light=500, humidity=None, temperature=None))
     assert any("부족" in r for r in results[0].reasons)
 
 
 def test_light_too_high_reason_mentions_과다() -> None:
-    c = _cand(light_min=100, light_max=300, humi_min=None, humi_max=None,
-              temp_min=None, temp_max=None)
+    c = _cand(light_min=100, light_max=300, humi_min=None, humi_max=None, temp_min=None, temp_max=None)
     results = filter_companions([c], _env(light=5000, humidity=None, temperature=None))
     assert any("과다" in r for r in results[0].reasons)
 
 
 def test_light_at_lower_boundary_matches() -> None:
-    c = _cand(light_min=1000, light_max=2000, humi_min=None, humi_max=None,
-              temp_min=None, temp_max=None)
+    c = _cand(light_min=1000, light_max=2000, humi_min=None, humi_max=None, temp_min=None, temp_max=None)
     results = filter_companions([c], _env(light=1000, humidity=None, temperature=None))
     assert results[0].score == 1.0
 
 
 def test_light_at_upper_boundary_matches() -> None:
-    c = _cand(light_min=1000, light_max=2000, humi_min=None, humi_max=None,
-              temp_min=None, temp_max=None)
+    c = _cand(light_min=1000, light_max=2000, humi_min=None, humi_max=None, temp_min=None, temp_max=None)
     results = filter_companions([c], _env(light=2000, humidity=None, temperature=None))
     assert results[0].score == 1.0
 
 
 def test_light_reason_contains_lux_values() -> None:
-    c = _cand(light_min=500, light_max=2000, humi_min=None, humi_max=None,
-              temp_min=None, temp_max=None)
+    c = _cand(light_min=500, light_max=2000, humi_min=None, humi_max=None, temp_min=None, temp_max=None)
     results = filter_companions([c], _env(light=1000, humidity=None, temperature=None))
     reasons_text = " ".join(results[0].reasons)
     assert "lux" in reasons_text
@@ -217,22 +213,19 @@ def test_light_reason_contains_lux_values() -> None:
 
 
 def test_humidity_too_low_reason_mentions_부족() -> None:
-    c = _cand(light_min=None, light_max=None, humi_min=80, humi_max=100,
-              temp_min=None, temp_max=None)
+    c = _cand(light_min=None, light_max=None, humi_min=80, humi_max=100, temp_min=None, temp_max=None)
     results = filter_companions([c], _env(light=None, humidity=40, temperature=None))
     assert any("부족" in r for r in results[0].reasons)
 
 
 def test_humidity_too_high_reason_mentions_과다() -> None:
-    c = _cand(light_min=None, light_max=None, humi_min=20, humi_max=40,
-              temp_min=None, temp_max=None)
+    c = _cand(light_min=None, light_max=None, humi_min=20, humi_max=40, temp_min=None, temp_max=None)
     results = filter_companions([c], _env(light=None, humidity=80, temperature=None))
     assert any("과다" in r for r in results[0].reasons)
 
 
 def test_humidity_match_reason_contains_percent() -> None:
-    c = _cand(light_min=None, light_max=None, humi_min=40, humi_max=70,
-              temp_min=None, temp_max=None)
+    c = _cand(light_min=None, light_max=None, humi_min=40, humi_max=70, temp_min=None, temp_max=None)
     results = filter_companions([c], _env(light=None, humidity=55, temperature=None))
     reasons_text = " ".join(results[0].reasons)
     assert "%" in reasons_text
@@ -244,22 +237,19 @@ def test_humidity_match_reason_contains_percent() -> None:
 
 
 def test_temperature_too_low_reason_mentions_부족() -> None:
-    c = _cand(light_min=None, light_max=None, humi_min=None, humi_max=None,
-              temp_min=25, temp_max=35)
+    c = _cand(light_min=None, light_max=None, humi_min=None, humi_max=None, temp_min=25, temp_max=35)
     results = filter_companions([c], _env(light=None, humidity=None, temperature=15))
     assert any("부족" in r for r in results[0].reasons)
 
 
 def test_temperature_too_high_reason_mentions_과다() -> None:
-    c = _cand(light_min=None, light_max=None, humi_min=None, humi_max=None,
-              temp_min=15, temp_max=20)
+    c = _cand(light_min=None, light_max=None, humi_min=None, humi_max=None, temp_min=15, temp_max=20)
     results = filter_companions([c], _env(light=None, humidity=None, temperature=35))
     assert any("과다" in r for r in results[0].reasons)
 
 
 def test_temperature_reason_contains_celsius_symbol() -> None:
-    c = _cand(light_min=None, light_max=None, humi_min=None, humi_max=None,
-              temp_min=18, temp_max=28)
+    c = _cand(light_min=None, light_max=None, humi_min=None, humi_max=None, temp_min=18, temp_max=28)
     results = filter_companions([c], _env(light=None, humidity=None, temperature=23))
     reasons_text = " ".join(results[0].reasons)
     assert "°C" in reasons_text
@@ -291,8 +281,7 @@ def test_no_environment_reason_mentions_스냅샷() -> None:
 
 
 def test_missing_light_sensor_skipped() -> None:
-    c = _cand(light_min=500, light_max=2000, humi_min=None, humi_max=None,
-              temp_min=None, temp_max=None)
+    c = _cand(light_min=500, light_max=2000, humi_min=None, humi_max=None, temp_min=None, temp_max=None)
     env = _env(light=None, humidity=None, temperature=None)
     results = filter_companions([c], env)
     assert results[0].assessed_dimensions == 0
@@ -300,8 +289,7 @@ def test_missing_light_sensor_skipped() -> None:
 
 
 def test_candidate_no_thresholds_assessed_zero() -> None:
-    c = _cand(light_min=None, light_max=None, humi_min=None, humi_max=None,
-              temp_min=None, temp_max=None)
+    c = _cand(light_min=None, light_max=None, humi_min=None, humi_max=None, temp_min=None, temp_max=None)
     results = filter_companions([c], _env())
     assert results[0].assessed_dimensions == 0
     assert results[0].score == 0.5
@@ -309,8 +297,7 @@ def test_candidate_no_thresholds_assessed_zero() -> None:
 
 def test_partial_env_data_only_available_dims_assessed() -> None:
     # Only temperature sensor available; candidate has all thresholds
-    c = _cand(light_min=500, light_max=2000, humi_min=40, humi_max=70,
-              temp_min=18, temp_max=28)
+    c = _cand(light_min=500, light_max=2000, humi_min=40, humi_max=70, temp_min=18, temp_max=28)
     env = _env(light=None, humidity=None, temperature=23)  # only temp available
     results = filter_companions([c], env)
     assert results[0].assessed_dimensions == 1
@@ -348,10 +335,8 @@ def test_no_current_species_all_candidates_included() -> None:
 
 
 def test_sorted_by_score_descending() -> None:
-    good = _cand(name="좋은 식물", light_min=500, light_max=2000,
-                 humi_min=40, humi_max=70, temp_min=18, temp_max=28)
-    bad = _cand(name="나쁜 식물", light_min=5000, light_max=10000,
-                humi_min=80, humi_max=100, temp_min=30, temp_max=40)
+    good = _cand(name="좋은 식물", light_min=500, light_max=2000, humi_min=40, humi_max=70, temp_min=18, temp_max=28)
+    bad = _cand(name="나쁜 식물", light_min=5000, light_max=10000, humi_min=80, humi_max=100, temp_min=30, temp_max=40)
     env = _env(light=1000, humidity=55, temperature=23)
     results = filter_companions([bad, good], env)
     assert results[0].candidate.common_name == "좋은 식물"

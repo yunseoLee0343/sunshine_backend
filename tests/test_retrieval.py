@@ -11,11 +11,9 @@ from app.domain.retrieval import (
     ALL_RAG_LAYERS,
     RAG_LAYER_TO_CHUNK_KINDS,
     RetrievalFilter,
-    RetrievalRunResult,
     RetrievedChunkResult,
 )
-from app.schemas.retrieval import RetrievalRequest, RetrievalResponse
-
+from app.schemas.retrieval import RetrievalRequest
 
 # ---------------------------------------------------------------------------
 # Domain constants
@@ -28,6 +26,7 @@ def test_all_rag_layers_has_three_entries() -> None:
 
 def test_rag_layer_to_chunk_kinds_covers_all_chunk_kinds() -> None:
     from app.domain.chunk import CHUNK_KINDS
+
     covered: set[str] = set()
     for kinds in RAG_LAYER_TO_CHUNK_KINDS.values():
         covered.update(kinds)
@@ -69,6 +68,7 @@ def test_retrieval_request_defaults() -> None:
 
 def test_retrieval_request_rejects_empty_question() -> None:
     import pydantic
+
     with pytest.raises(pydantic.ValidationError):
         RetrievalRequest(
             request_id=uuid.uuid4(),
@@ -79,6 +79,7 @@ def test_retrieval_request_rejects_empty_question() -> None:
 
 def test_retrieval_request_rejects_top_k_zero() -> None:
     import pydantic
+
     with pytest.raises(pydantic.ValidationError):
         RetrievalRequest(
             request_id=uuid.uuid4(),
@@ -90,6 +91,7 @@ def test_retrieval_request_rejects_top_k_zero() -> None:
 
 def test_retrieval_request_rejects_top_k_over_20() -> None:
     import pydantic
+
     with pytest.raises(pydantic.ValidationError):
         RetrievalRequest(
             request_id=uuid.uuid4(),
@@ -101,6 +103,7 @@ def test_retrieval_request_rejects_top_k_over_20() -> None:
 
 def test_retrieval_request_forbids_extra_fields() -> None:
     import pydantic
+
     with pytest.raises(pydantic.ValidationError):
         RetrievalRequest(
             request_id=uuid.uuid4(),
@@ -117,16 +120,19 @@ def test_retrieval_request_forbids_extra_fields() -> None:
 
 def test_dot_product_orthogonal_vectors() -> None:
     from app.retrieval.hybrid_retriever import _dot
+
     assert _dot([1.0, 0.0], [0.0, 1.0]) == pytest.approx(0.0)
 
 
 def test_dot_product_parallel_unit_vectors() -> None:
     from app.retrieval.hybrid_retriever import _dot
+
     assert _dot([1.0, 0.0], [1.0, 0.0]) == pytest.approx(1.0)
 
 
 def test_dot_product_general() -> None:
     from app.retrieval.hybrid_retriever import _dot
+
     assert _dot([0.5, 0.5], [0.5, 0.5]) == pytest.approx(0.5)
 
 
@@ -235,8 +241,8 @@ async def test_retrieve_ranks_by_similarity() -> None:
 
 @pytest.mark.asyncio
 async def test_retrieval_service_returns_cached_on_duplicate_request_id() -> None:
-    from app.models.retrieval_run import RetrievalRun
     from app.models.retrieval_result_chunk import RetrievalResultChunk
+    from app.models.retrieval_run import RetrievalRun
     from app.services.retrieval_service import RetrievalService
 
     run_id = uuid.uuid4()
@@ -255,9 +261,7 @@ async def test_retrieval_service_returns_cached_on_duplicate_request_id() -> Non
     session = AsyncMock()
     session.get = AsyncMock(return_value=cached_run)
     session.execute = AsyncMock(
-        return_value=MagicMock(
-            scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[cached_chunk])))
-        )
+        return_value=MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[cached_chunk]))))
     )
 
     svc = RetrievalService(session)
@@ -299,11 +303,10 @@ async def test_retrieval_service_fresh_query_calls_retriever() -> None:
 
     svc = RetrievalService(session)
 
-    with patch(
-        "app.services.retrieval_service._get_embedding_service"
-    ) as mock_emb_factory, patch(
-        "app.services.retrieval_service.HybridRetriever"
-    ) as mock_retriever_cls:
+    with (
+        patch("app.services.retrieval_service._get_embedding_service") as mock_emb_factory,
+        patch("app.services.retrieval_service.HybridRetriever") as mock_retriever_cls,
+    ):
         mock_emb = MagicMock()
         mock_emb.model_name = "test-model"
         mock_emb_factory.return_value = mock_emb
@@ -333,6 +336,7 @@ async def test_retrieval_service_fresh_query_calls_retriever() -> None:
 
 def test_hybrid_retriever_has_no_llm_imports() -> None:
     import app.retrieval.hybrid_retriever as mod
+
     src = open(mod.__file__, encoding="utf-8").read()
     for forbidden in ("openai", "anthropic", "torch", "prompt", "answer"):
         assert forbidden not in src, f"Forbidden: {forbidden!r}"
@@ -340,6 +344,7 @@ def test_hybrid_retriever_has_no_llm_imports() -> None:
 
 def test_retrieval_service_has_no_llm_imports() -> None:
     import app.services.retrieval_service as mod
+
     src = open(mod.__file__, encoding="utf-8").read()
     for forbidden in ("openai", "anthropic", "torch", "PromptBuilder", "EvidenceBuilder"):
         assert forbidden not in src, f"Forbidden: {forbidden!r}"
@@ -352,12 +357,14 @@ def test_retrieval_service_has_no_llm_imports() -> None:
 
 def test_migration_0005_exists() -> None:
     from pathlib import Path
+
     m = Path("alembic/versions/0005_ticket14c_retrieval_tables.py")
     assert m.exists()
 
 
 def test_migration_0005_has_both_tables() -> None:
     from pathlib import Path
+
     src = Path("alembic/versions/0005_ticket14c_retrieval_tables.py").read_text(encoding="utf-8")
     assert "retrieval_runs" in src
     assert "retrieval_result_chunks" in src

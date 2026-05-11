@@ -13,8 +13,7 @@ from __future__ import annotations
 
 import uuid
 
-import pytest
-
+from app.seeds.demo_scenario import ScenarioStep, _step12_intent_classifier
 from app.seeds.demo_seed import (
     DEMO_KNOWLEDGE_ID,
     DEMO_MONSTERA_SPECIES_ID,
@@ -28,8 +27,6 @@ from app.seeds.demo_seed import (
     demo_id,
     make_vector,
 )
-from app.seeds.demo_scenario import ScenarioStep, _step12_intent_classifier
-
 
 # ---------------------------------------------------------------------------
 # demo_id (ID stability)

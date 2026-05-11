@@ -42,9 +42,7 @@ class HybridRetriever:
         self.session = session
         self.emb = embedding_service
 
-    async def retrieve(
-        self, f: RetrievalFilter
-    ) -> list[RetrievedChunkResult]:
+    async def retrieve(self, f: RetrievalFilter) -> list[RetrievedChunkResult]:
         # ---- 1. resolve allowed chunk kinds from RAG layers ----------------
         allowed_kinds: set[str] = set()
         for layer in f.rag_layers:
@@ -60,9 +58,7 @@ class HybridRetriever:
         # ---- 3. fetch candidate chunk documents ----------------------------
         stmt = select(PlantChunkDocument)
         if knowledge_ids is not None:
-            stmt = stmt.where(
-                PlantChunkDocument.plant_knowledge_id.in_(knowledge_ids)
-            )
+            stmt = stmt.where(PlantChunkDocument.plant_knowledge_id.in_(knowledge_ids))
         if allowed_kinds:
             stmt = stmt.where(PlantChunkDocument.chunk_kind.in_(allowed_kinds))
 
@@ -74,13 +70,9 @@ class HybridRetriever:
         # ---- 4. load embeddings -------------------------------------------
         doc_ids = [d.id for d in docs]
         emb_result = await self.session.execute(
-            select(PlantChunkEmbedding).where(
-                PlantChunkEmbedding.chunk_document_id.in_(doc_ids)
-            )
+            select(PlantChunkEmbedding).where(PlantChunkEmbedding.chunk_document_id.in_(doc_ids))
         )
-        embeddings_by_doc = {
-            e.chunk_document_id: e for e in emb_result.scalars().all()
-        }
+        embeddings_by_doc = {e.chunk_document_id: e for e in emb_result.scalars().all()}
 
         # ---- 5. embed question + score ------------------------------------
         query_vec = self.emb.embed(f.question)
@@ -110,16 +102,12 @@ class HybridRetriever:
 
     # ---------------------------------------------------------------------- private
 
-    async def _resolve_knowledge_ids(
-        self, species_profile_id: uuid.UUID
-    ) -> list[uuid.UUID]:
+    async def _resolve_knowledge_ids(self, species_profile_id: uuid.UUID) -> list[uuid.UUID]:
         sp = await self.session.get(SpeciesProfile, species_profile_id)
         if sp is None or not sp.scientific_name:
             return []
         result = await self.session.execute(
-            select(PlantKnowledgeEntry).where(
-                PlantKnowledgeEntry.scientific_name == sp.scientific_name
-            )
+            select(PlantKnowledgeEntry).where(PlantKnowledgeEntry.scientific_name == sp.scientific_name)
         )
         return [e.id for e in result.scalars().all()]
 

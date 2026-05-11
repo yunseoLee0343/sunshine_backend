@@ -112,9 +112,7 @@ class SnapshotService:
             snapshots=results,
         )
 
-    async def _persist(
-        self, result: EnvironmentSnapshotResult, created_at: datetime
-    ) -> None:
+    async def _persist(self, result: EnvironmentSnapshotResult, created_at: datetime) -> None:
         await self.repo.upsert(
             plant_id=result.plant_id,
             window=result.window,

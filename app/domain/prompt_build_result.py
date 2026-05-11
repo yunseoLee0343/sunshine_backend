@@ -10,7 +10,7 @@ No LLM calls, no DB access.
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
@@ -18,11 +18,11 @@ class PromptBuildResult:
     """Output of PromptBuilder.build()."""
 
     system_prompt: str
-    user_turn: str          # The user's question, verbatim
+    user_turn: str  # The user's question, verbatim
     intent: str
     guardrails_applied: tuple[str, ...]
-    token_estimate: int     # Rough upper-bound; not used for billing
-    prompt_hash: str        # SHA-256 hex of system_prompt
+    token_estimate: int  # Rough upper-bound; not used for billing
+    prompt_hash: str  # SHA-256 hex of system_prompt
 
 
 def build_prompt_result(

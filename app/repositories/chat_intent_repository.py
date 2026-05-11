@@ -27,9 +27,7 @@ class ChatIntentRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def find_by_request_id(
-        self, request_id: uuid.UUID
-    ) -> ChatIntentResponse | None:
+    async def find_by_request_id(self, request_id: uuid.UUID) -> ChatIntentResponse | None:
         """Return a previously stored classification, or None if not found."""
         row = await self.session.get(ChatRequest, request_id)
         if row is None:
@@ -38,11 +36,7 @@ class ChatIntentRepository:
         # Determine stage: LlmRun exists ↔ stage was "llm"
         llm_row = await self._find_llm_run(request_id)
         stage: ClassifierStage = "llm" if llm_row is not None else "rule"
-        confidence = (
-            float(llm_row.tokens_in) / 100.0
-            if llm_row is not None and llm_row.tokens_in is not None
-            else 0.95
-        )
+        confidence = float(llm_row.tokens_in) / 100.0 if llm_row is not None and llm_row.tokens_in is not None else 0.95
 
         return self._build_response(row, stage, confidence)
 
@@ -89,9 +83,7 @@ class ChatIntentRepository:
     # ------------------------------------------------------------------
 
     async def _find_llm_run(self, request_id: uuid.UUID) -> LlmRun | None:
-        result = await self.session.execute(
-            select(LlmRun).where(LlmRun.request_id == request_id).limit(1)
-        )
+        result = await self.session.execute(select(LlmRun).where(LlmRun.request_id == request_id).limit(1))
         return result.scalar_one_or_none()
 
     @staticmethod

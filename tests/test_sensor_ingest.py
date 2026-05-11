@@ -2,7 +2,7 @@
 
 import asyncio
 import uuid
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -10,13 +10,13 @@ from httpx import ASGITransport, AsyncClient
 
 from app.api.sensor_readings import get_session
 from app.main import app
-from app.schemas.sensor_readings import SensorReadingRequest, SensorReadingResponse
+from app.schemas.sensor_readings import SensorReadingRequest
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-_TZ = timezone.utc
+_TZ = UTC
 _PLANT_ID = uuid.uuid4()
 _DEVICE_ID = "dev-001"
 
@@ -44,6 +44,7 @@ async def _post(body: dict) -> tuple[int, dict]:
 
 def _make_plant():
     from app.models.plant import Plant
+
     now = datetime.now(UTC)
     return Plant(
         id=_PLANT_ID,
@@ -70,25 +71,32 @@ def _fake_session_factory(plant=None, existing_reading=None):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("rid", [
-    "abc123",
-    "r-001",
-    "sensor_01",
-    "device:01.read",
-])
+@pytest.mark.parametrize(
+    "rid",
+    [
+        "abc123",
+        "r-001",
+        "sensor_01",
+        "device:01.read",
+    ],
+)
 def test_valid_reading_id_charset(rid: str) -> None:
     SensorReadingRequest(**{**_valid_payload(), "reading_id": rid})
 
 
-@pytest.mark.parametrize("rid", [
-    "has space",
-    "bang!",
-    "slash/",
-    "hash#tag",
-    "",
-])
+@pytest.mark.parametrize(
+    "rid",
+    [
+        "has space",
+        "bang!",
+        "slash/",
+        "hash#tag",
+        "",
+    ],
+)
 def test_invalid_reading_id_charset(rid: str) -> None:
     from pydantic import ValidationError
+
     with pytest.raises(ValidationError):
         SensorReadingRequest(**{**_valid_payload(), "reading_id": rid})
 
@@ -100,6 +108,7 @@ def test_invalid_reading_id_charset(rid: str) -> None:
 
 def test_measured_at_naive_rejected() -> None:
     from pydantic import ValidationError
+
     with pytest.raises(ValidationError):
         SensorReadingRequest(**{**_valid_payload(), "measured_at": "2026-05-10T10:00:00"})
 
@@ -114,36 +123,54 @@ def test_measured_at_aware_accepted() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("field,bad_val", [
-    ("temperature_c", -41.0),
-    ("temperature_c", 81.0),
-    ("humidity_pct", -0.1),
-    ("humidity_pct", 100.1),
-    ("light_lux", -1.0),
-    ("light_lux", 200_001.0),
-    ("soil_moisture_pct", -0.1),
-    ("soil_moisture_pct", 100.1),
-])
+@pytest.mark.parametrize(
+    "field,bad_val",
+    [
+        ("temperature_c", -41.0),
+        ("temperature_c", 81.0),
+        ("humidity_pct", -0.1),
+        ("humidity_pct", 100.1),
+        ("light_lux", -1.0),
+        ("light_lux", 200_001.0),
+        ("soil_moisture_pct", -0.1),
+        ("soil_moisture_pct", 100.1),
+    ],
+)
 def test_out_of_range_values_rejected(field: str, bad_val: float) -> None:
     from pydantic import ValidationError
+
     with pytest.raises(ValidationError):
         SensorReadingRequest(**{**_valid_payload(), field: bad_val})
 
 
-@pytest.mark.parametrize("field", [
-    "temperature_c", "humidity_pct", "light_lux", "soil_moisture_pct",
-])
+@pytest.mark.parametrize(
+    "field",
+    [
+        "temperature_c",
+        "humidity_pct",
+        "light_lux",
+        "soil_moisture_pct",
+    ],
+)
 def test_nan_rejected(field: str) -> None:
     from pydantic import ValidationError
+
     with pytest.raises(ValidationError):
         SensorReadingRequest(**{**_valid_payload(), field: float("nan")})
 
 
-@pytest.mark.parametrize("field", [
-    "temperature_c", "humidity_pct", "light_lux", "soil_moisture_pct",
-])
+@pytest.mark.parametrize(
+    "field",
+    [
+        "temperature_c",
+        "humidity_pct",
+        "light_lux",
+        "soil_moisture_pct",
+    ],
+)
 def test_infinity_rejected(field: str) -> None:
     from pydantic import ValidationError
+
     with pytest.raises(ValidationError):
         SensorReadingRequest(**{**_valid_payload(), field: float("inf")})
 
@@ -189,6 +216,7 @@ def test_new_reading_returns_201() -> None:
 
 def test_duplicate_reading_id_returns_200() -> None:
     from app.models.sensor_reading import SensorReading
+
     plant = _make_plant()
     now = datetime.now(UTC)
     existing = SensorReading(
@@ -255,9 +283,7 @@ def test_missing_required_field_returns_422() -> None:
 
 
 def test_naive_timestamp_returns_422() -> None:
-    status, _ = asyncio.run(
-        _post(_valid_payload(measured_at="2026-05-10T10:00:00"))
-    )
+    status, _ = asyncio.run(_post(_valid_payload(measured_at="2026-05-10T10:00:00")))
     assert status == 422
 
 

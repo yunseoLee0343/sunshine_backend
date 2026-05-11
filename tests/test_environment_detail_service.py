@@ -179,14 +179,17 @@ async def test_no_character_gives_null_explanation() -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("reason_code,expected_fragment", [
-    ("good", "건강한"),
-    ("low_soil_moisture", "토양 수분 부족"),
-    ("low_light", "빛 부족"),
-    ("unstable_humidity", "습도 또는 온도 불안정"),
-    ("after_watering", "물 주기"),
-    ("onboarding_created", "새로 등록"),
-])
+@pytest.mark.parametrize(
+    "reason_code,expected_fragment",
+    [
+        ("good", "건강한"),
+        ("low_soil_moisture", "토양 수분 부족"),
+        ("low_light", "빛 부족"),
+        ("unstable_humidity", "습도 또는 온도 불안정"),
+        ("after_watering", "물 주기"),
+        ("onboarding_created", "새로 등록"),
+    ],
+)
 async def test_explanation_template_mapped(reason_code: str, expected_fragment: str) -> None:
     svc = await _make_svc(plant=_make_plant(), char=_make_char(reason_code))
     result = await svc.get_detail(_PLANT_ID, _USER_ID)

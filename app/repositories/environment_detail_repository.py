@@ -20,9 +20,7 @@ class EnvironmentDetailRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def get_plant_for_user(
-        self, plant_id: uuid.UUID, user_id: uuid.UUID
-    ) -> Plant | None:
+    async def get_plant_for_user(self, plant_id: uuid.UUID, user_id: uuid.UUID) -> Plant | None:
         """Return plant only when it belongs to the requesting user."""
         result = await self.session.execute(
             select(Plant).where(
@@ -32,9 +30,7 @@ class EnvironmentDetailRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_snapshot_by_window(
-        self, plant_id: uuid.UUID, window: str
-    ) -> EnvironmentSnapshot | None:
+    async def get_snapshot_by_window(self, plant_id: uuid.UUID, window: str) -> EnvironmentSnapshot | None:
         """Return the most recently created snapshot for the given window name."""
         result = await self.session.execute(
             select(EnvironmentSnapshot)

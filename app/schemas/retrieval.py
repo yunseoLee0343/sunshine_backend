@@ -16,9 +16,7 @@ class RetrievalRequest(BaseModel):
     user_id: uuid.UUID
     question: str = Field(..., min_length=1, max_length=2000)
     species_profile_id: uuid.UUID | None = None
-    rag_layers: list[RagLayer] = Field(
-        default_factory=lambda: list(ALL_RAG_LAYERS)
-    )
+    rag_layers: list[RagLayer] = Field(default_factory=lambda: list(ALL_RAG_LAYERS))
     top_k: int = Field(default=5, ge=1, le=20)
 
 

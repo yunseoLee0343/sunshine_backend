@@ -18,10 +18,9 @@ class EvidenceBuildRequest(BaseModel):
     user_id: uuid.UUID
     question: str = Field(..., min_length=1, max_length=2000)
     intent: Intent
-    rag_layers: list[RagLayer] = Field(
-        default_factory=lambda: list(ALL_RAG_LAYERS)
-    )
+    rag_layers: list[RagLayer] = Field(default_factory=lambda: list(ALL_RAG_LAYERS))
     retrieval_run_id: uuid.UUID | None = None  # load chunks from existing retrieval run
+    visual_facts: list[str] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------

@@ -69,8 +69,8 @@ class LatestSnapshot:
 class RecentCareLog:
     """A single care-log entry relevant to rule evaluation."""
 
-    action_type: str          # e.g. "water", "fertilise", …
-    hours_ago: float          # positive; 0.0 = acted_at == now
+    action_type: str  # e.g. "water", "fertilise", …
+    hours_ago: float  # positive; 0.0 = acted_at == now
 
 
 # ---------------------------------------------------------------------------
@@ -80,7 +80,7 @@ class RecentCareLog:
 
 @dataclass
 class RuleResult:
-    rule: str                              # e.g. "watering"
+    rule: str  # e.g. "watering"
     care_status: CareStatus
     severity: Severity
     action: PrimaryAction

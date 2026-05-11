@@ -23,16 +23,8 @@ def evaluate(
     care_logs: list[RecentCareLog],  # noqa: ARG001
 ) -> RuleResult:
     temp = snapshot.temperature_avg_c
-    temp_min = (
-        float(thresholds.temperature_min_c)
-        if thresholds.temperature_min_c is not None
-        else None
-    )
-    temp_max = (
-        float(thresholds.temperature_max_c)
-        if thresholds.temperature_max_c is not None
-        else None
-    )
+    temp_min = float(thresholds.temperature_min_c) if thresholds.temperature_min_c is not None else None
+    temp_max = float(thresholds.temperature_max_c) if thresholds.temperature_max_c is not None else None
 
     if temp is None or temp_min is None:
         return RuleResult(

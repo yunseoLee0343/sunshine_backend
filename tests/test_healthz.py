@@ -21,9 +21,7 @@ def test_healthz_status_200() -> None:
     """GET /healthz must return HTTP 200."""
 
     async def _run() -> int:
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/healthz")
         return response.status_code
 
@@ -34,9 +32,7 @@ def test_healthz_exact_json() -> None:
     """GET /healthz must return exactly the specified JSON body."""
 
     async def _run() -> dict:
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/healthz")
         return response.json()
 

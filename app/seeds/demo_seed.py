@@ -23,7 +23,7 @@ import hashlib
 import json
 import sys
 import uuid
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
@@ -190,18 +190,14 @@ async def _ensure_plant(session: AsyncSession, result: SeedResult) -> None:
     result.record("created", "plant:초록이")
 
 
-async def _ensure_sensor_readings(
-    session: AsyncSession, result: SeedResult
-) -> None:
+async def _ensure_sensor_readings(session: AsyncSession, result: SeedResult) -> None:
     from app.models.sensor_reading import SensorReading
 
     # 48 readings at 30-min intervals covering the 24 h before _BASE
     readings_to_create: list[SensorReading] = []
     for i in range(48):
         rid = f"demo-reading-monstera-{i:03d}"
-        existing = await session.execute(
-            select(SensorReading).where(SensorReading.reading_id == rid).limit(1)
-        )
+        existing = await session.execute(select(SensorReading).where(SensorReading.reading_id == rid).limit(1))
         if existing.scalar_one_or_none() is not None:
             continue
         measured_at = _BASE - timedelta(hours=24) + timedelta(minutes=30 * i)
@@ -342,15 +338,11 @@ async def _ensure_plant_character(session: AsyncSession, result: SeedResult) -> 
 # ---------------------------------------------------------------------------
 
 
-async def _ensure_knowledge_entry(
-    session: AsyncSession, result: SeedResult
-) -> None:
+async def _ensure_knowledge_entry(session: AsyncSession, result: SeedResult) -> None:
     from app.models.plant_knowledge_entry import PlantKnowledgeEntry
 
     existing = await session.execute(
-        select(PlantKnowledgeEntry)
-        .where(PlantKnowledgeEntry.nongsaro_id == "DEMO-MONSTERA-001")
-        .limit(1)
+        select(PlantKnowledgeEntry).where(PlantKnowledgeEntry.nongsaro_id == "DEMO-MONSTERA-001").limit(1)
     )
     if existing.scalar_one_or_none() is not None:
         result.record("skipped", "knowledge_entry:monstera")
@@ -371,15 +363,11 @@ async def _ensure_knowledge_entry(
     result.record("created", "knowledge_entry:monstera")
 
 
-async def _ensure_care_requirement(
-    session: AsyncSession, result: SeedResult
-) -> None:
+async def _ensure_care_requirement(session: AsyncSession, result: SeedResult) -> None:
     from app.models.plant_care_requirement import PlantCareRequirement
 
     existing = await session.execute(
-        select(PlantCareRequirement)
-        .where(PlantCareRequirement.entry_id == DEMO_KNOWLEDGE_ID)
-        .limit(1)
+        select(PlantCareRequirement).where(PlantCareRequirement.entry_id == DEMO_KNOWLEDGE_ID).limit(1)
     )
     if existing.scalar_one_or_none() is not None:
         result.record("skipped", "care_requirement:monstera")
@@ -390,10 +378,7 @@ async def _ensure_care_requirement(
         entry_id=DEMO_KNOWLEDGE_ID,
         growth_temp_text="18–28°C (최적 20–25°C)",
         light_requirement="간접광 선호, 직사광선 회피. 500–3000 lux 적합.",
-        watering_frequency=(
-            "봄·여름: 흙 표면 1–2 cm 마르면 충분히 관수. "
-            "가을·겨울: 2주에 1회 정도로 줄임."
-        ),
+        watering_frequency=("봄·여름: 흙 표면 1–2 cm 마르면 충분히 관수. 가을·겨울: 2주에 1회 정도로 줄임."),
         soil_type="배수 좋은 혼합 배양토 (펄라이트 20% 혼합 권장)",
         fertilizer_info="생육기(봄~여름) 월 1회 액체 비료",
         created_at=now,
@@ -403,15 +388,11 @@ async def _ensure_care_requirement(
     result.record("created", "care_requirement:monstera")
 
 
-async def _ensure_pest_reference(
-    session: AsyncSession, result: SeedResult
-) -> None:
+async def _ensure_pest_reference(session: AsyncSession, result: SeedResult) -> None:
     from app.models.plant_pest_reference import PlantPestReference
 
     existing = await session.execute(
-        select(PlantPestReference)
-        .where(PlantPestReference.entry_id == DEMO_KNOWLEDGE_ID)
-        .limit(1)
+        select(PlantPestReference).where(PlantPestReference.entry_id == DEMO_KNOWLEDGE_ID).limit(1)
     )
     if existing.scalar_one_or_none() is not None:
         result.record("skipped", "pest_reference:monstera")
@@ -420,15 +401,8 @@ async def _ensure_pest_reference(
     row = PlantPestReference(
         id=uuid.uuid4(),
         entry_id=DEMO_KNOWLEDGE_ID,
-        pest_text=(
-            "응애: 건조한 환경에서 발생하기 쉬움. "
-            "잎 뒷면에 거미줄 형태 관찰. "
-            "진딧물: 새 잎 주변에 군집 형성."
-        ),
-        disease_text=(
-            "탄저병: 잎에 갈색 반점 발생. 과습 시 악화. "
-            "뿌리 썩음병: 과습·배수 불량 환경에서 발생."
-        ),
+        pest_text=("응애: 건조한 환경에서 발생하기 쉬움. 잎 뒷면에 거미줄 형태 관찰. 진딧물: 새 잎 주변에 군집 형성."),
+        disease_text=("탄저병: 잎에 갈색 반점 발생. 과습 시 악화. 뿌리 썩음병: 과습·배수 불량 환경에서 발생."),
         parsed_pest_terms=["응애", "진딧물", "탄저병", "뿌리 썩음병"],
         created_at=now,
         updated_at=now,
@@ -437,15 +411,11 @@ async def _ensure_pest_reference(
     result.record("created", "pest_reference:monstera")
 
 
-async def _ensure_seasonal_watering(
-    session: AsyncSession, result: SeedResult
-) -> None:
+async def _ensure_seasonal_watering(session: AsyncSession, result: SeedResult) -> None:
     from app.models.plant_seasonal_watering import PlantSeasonalWatering
 
     existing = await session.execute(
-        select(PlantSeasonalWatering)
-        .where(PlantSeasonalWatering.entry_id == DEMO_KNOWLEDGE_ID)
-        .limit(1)
+        select(PlantSeasonalWatering).where(PlantSeasonalWatering.entry_id == DEMO_KNOWLEDGE_ID).limit(1)
     )
     if existing.scalar_one_or_none() is not None:
         result.record("skipped", "seasonal_watering:monstera")
@@ -525,10 +495,14 @@ _SPECIES_DEFS = [
         korean_name="몬스테라",
         scientific_name="Monstera deliciosa",
         common_name="Swiss Cheese Plant",
-        water_min=Decimal("20"), water_max=Decimal("60"),
-        light_min=Decimal("500"), light_max=Decimal("3000"),
-        humidity_min=Decimal("50"), humidity_max=Decimal("80"),
-        temp_min=Decimal("18"), temp_max=Decimal("28"),
+        water_min=Decimal("20"),
+        water_max=Decimal("60"),
+        light_min=Decimal("500"),
+        light_max=Decimal("3000"),
+        humidity_min=Decimal("50"),
+        humidity_max=Decimal("80"),
+        temp_min=Decimal("18"),
+        temp_max=Decimal("28"),
         metadata={"is_toxic": True, "toxic_to_pets": True, "toxic_to_children": False},
     ),
     dict(
@@ -537,10 +511,14 @@ _SPECIES_DEFS = [
         korean_name="포토스",
         scientific_name="Epipremnum aureum",
         common_name="Pothos",
-        water_min=Decimal("25"), water_max=Decimal("65"),
-        light_min=Decimal("300"), light_max=Decimal("2000"),
-        humidity_min=Decimal("40"), humidity_max=Decimal("70"),
-        temp_min=Decimal("18"), temp_max=Decimal("28"),
+        water_min=Decimal("25"),
+        water_max=Decimal("65"),
+        light_min=Decimal("300"),
+        light_max=Decimal("2000"),
+        humidity_min=Decimal("40"),
+        humidity_max=Decimal("70"),
+        temp_min=Decimal("18"),
+        temp_max=Decimal("28"),
         metadata={"is_toxic": True, "toxic_to_pets": True, "toxic_to_children": False},
     ),
     dict(
@@ -549,10 +527,14 @@ _SPECIES_DEFS = [
         korean_name="필로덴드론",
         scientific_name="Philodendron hederaceum",
         common_name="Philodendron",
-        water_min=Decimal("30"), water_max=Decimal("60"),
-        light_min=Decimal("500"), light_max=Decimal("2500"),
-        humidity_min=Decimal("50"), humidity_max=Decimal("80"),
-        temp_min=Decimal("18"), temp_max=Decimal("28"),
+        water_min=Decimal("30"),
+        water_max=Decimal("60"),
+        light_min=Decimal("500"),
+        light_max=Decimal("2500"),
+        humidity_min=Decimal("50"),
+        humidity_max=Decimal("80"),
+        temp_min=Decimal("18"),
+        temp_max=Decimal("28"),
         metadata={"is_toxic": False, "toxic_to_pets": False, "toxic_to_children": False},
     ),
     dict(
@@ -561,10 +543,14 @@ _SPECIES_DEFS = [
         korean_name="스파티필룸",
         scientific_name="Spathiphyllum wallisii",
         common_name="Peace Lily",
-        water_min=Decimal("40"), water_max=Decimal("70"),
-        light_min=Decimal("200"), light_max=Decimal("1000"),
-        humidity_min=Decimal("50"), humidity_max=Decimal("80"),
-        temp_min=Decimal("18"), temp_max=Decimal("28"),
+        water_min=Decimal("40"),
+        water_max=Decimal("70"),
+        light_min=Decimal("200"),
+        light_max=Decimal("1000"),
+        humidity_min=Decimal("50"),
+        humidity_max=Decimal("80"),
+        temp_min=Decimal("18"),
+        temp_max=Decimal("28"),
         metadata={"is_toxic": False, "toxic_to_pets": False, "toxic_to_children": False},
     ),
     dict(
@@ -573,10 +559,14 @@ _SPECIES_DEFS = [
         korean_name="산세베리아",
         scientific_name="Dracaena trifasciata",
         common_name="Snake Plant",
-        water_min=Decimal("10"), water_max=Decimal("30"),
-        light_min=Decimal("500"), light_max=Decimal("2500"),
-        humidity_min=Decimal("20"), humidity_max=Decimal("50"),
-        temp_min=Decimal("15"), temp_max=Decimal("35"),
+        water_min=Decimal("10"),
+        water_max=Decimal("30"),
+        light_min=Decimal("500"),
+        light_max=Decimal("2500"),
+        humidity_min=Decimal("20"),
+        humidity_max=Decimal("50"),
+        temp_min=Decimal("15"),
+        temp_max=Decimal("35"),
         metadata={"is_toxic": True, "toxic_to_pets": True, "toxic_to_children": False},
     ),
 ]
@@ -635,21 +625,24 @@ async def run_seed(session: AsyncSession) -> SeedResult:
 
     # 5. Environment snapshots (1h, 24h, 7d)
     await _ensure_snapshot(
-        session, result,
+        session,
+        result,
         window="1h",
         window_start=_BASE - timedelta(hours=1),
         window_end=_BASE,
         soil_moisture_avg=Decimal("18.0"),
     )
     await _ensure_snapshot(
-        session, result,
+        session,
+        result,
         window="24h",
         window_start=_BASE - timedelta(hours=24),
         window_end=_BASE,
         soil_moisture_avg=Decimal("18.5"),
     )
     await _ensure_snapshot(
-        session, result,
+        session,
+        result,
         window="7d",
         window_start=_BASE - timedelta(days=7),
         window_end=_BASE,
@@ -671,7 +664,8 @@ async def run_seed(session: AsyncSession) -> SeedResult:
     # 9. Chunk documents + embeddings
     for chunk_id, chunk_kind, chunk_text in _CHUNKS:
         await _ensure_chunk(
-            session, result,
+            session,
+            result,
             chunk_id=chunk_id,
             chunk_kind=chunk_kind,
             chunk_text=chunk_text,
@@ -692,14 +686,22 @@ async def _main() -> None:
 
     if check_only:
         print("ℹ️  --check mode: nothing will be written to the database.")
-        print(json.dumps({"demo_ids": {
-            "user_id": str(DEMO_USER_ID),
-            "plant_id": str(DEMO_PLANT_ID),
-            "monstera_species_id": str(DEMO_MONSTERA_SPECIES_ID),
-            "pothos_species_id": str(DEMO_POTHOS_SPECIES_ID),
-            "philodendron_species_id": str(DEMO_PHILODENDRON_SPECIES_ID),
-            "knowledge_id": str(DEMO_KNOWLEDGE_ID),
-        }}, indent=2, ensure_ascii=False))
+        print(
+            json.dumps(
+                {
+                    "demo_ids": {
+                        "user_id": str(DEMO_USER_ID),
+                        "plant_id": str(DEMO_PLANT_ID),
+                        "monstera_species_id": str(DEMO_MONSTERA_SPECIES_ID),
+                        "pothos_species_id": str(DEMO_POTHOS_SPECIES_ID),
+                        "philodendron_species_id": str(DEMO_PHILODENDRON_SPECIES_ID),
+                        "knowledge_id": str(DEMO_KNOWLEDGE_ID),
+                    }
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
         return
 
     async with AsyncSessionLocal() as session:

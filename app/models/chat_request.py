@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Text
+from sqlalchemy import DateTime, Float, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -16,3 +16,7 @@ class ChatRequest(Base):
     question: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # Audio fields — TICKET-031
+    audio_uri_in: Mapped[str | None] = mapped_column(Text, nullable=True)
+    audio_uri_out: Mapped[str | None] = mapped_column(Text, nullable=True)
+    audio_duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)

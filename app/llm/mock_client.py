@@ -14,8 +14,6 @@ Determinism contract:
 
 from __future__ import annotations
 
-import uuid
-
 from app.services.llm_port import (
     LLMRequest,
     LLMResponse,
@@ -24,7 +22,7 @@ from app.services.llm_port import (
 )
 
 _MODEL_NAME = "mock-model-v1"
-_PROVIDER   = "mock"
+_PROVIDER = "mock"
 _API_VERSION = "2026-05-10"
 
 _META = ModelMetadata(
@@ -37,10 +35,10 @@ _META = ModelMetadata(
 # Guardrail detection helpers (keyword-based, no regex needed)
 # ---------------------------------------------------------------------------
 
-_PEST_SIGNAL       = "참고용 지식"          # set by PromptBuilder pest guardrail
-_WATERING_BAN      = "물주기 금지"          # hypothetical directive for tests
-_UNKNOWN_SIGNAL    = "추가 정보가 필요합니다"  # set by PromptBuilder unknown guardrail
-_RULE_AUTH_SIGNAL  = "룰 엔진의 결과를 최우선"  # set by rule-engine authority guardrail
+_PEST_SIGNAL = "참고용 지식"  # set by PromptBuilder pest guardrail
+_WATERING_BAN = "물주기 금지"  # hypothetical directive for tests
+_UNKNOWN_SIGNAL = "추가 정보가 필요합니다"  # set by PromptBuilder unknown guardrail
+_RULE_AUTH_SIGNAL = "룰 엔진의 결과를 최우선"  # set by rule-engine authority guardrail
 
 
 # ---------------------------------------------------------------------------
@@ -54,10 +52,10 @@ def _build_response(request: LLMRequest) -> str:
     # Derive a 0–255 variation index from the first two hex chars of the hash
     variation = int(request.prompt_hash[:2], 16) % 4
 
-    pest_mode    = _PEST_SIGNAL in request.system_prompt
+    pest_mode = _PEST_SIGNAL in request.system_prompt
     watering_ban = _WATERING_BAN in request.system_prompt
     unknown_mode = _UNKNOWN_SIGNAL in request.system_prompt
-    rule_auth    = _RULE_AUTH_SIGNAL in request.system_prompt
+    rule_auth = _RULE_AUTH_SIGNAL in request.system_prompt
 
     # ---- [결론] -----------------------------------------------------------
     if unknown_mode:
@@ -91,15 +89,9 @@ def _build_response(request: LLMRequest) -> str:
 
     # ---- [행동] -----------------------------------------------------------
     if watering_ban:
-        action = (
-            "현재 물주기는 권장하지 않습니다. "
-            "대신 환경 조건(빛, 온도, 습도)을 점검하고 이상이 없는지 확인하세요."
-        )
+        action = "현재 물주기는 권장하지 않습니다. 대신 환경 조건(빛, 온도, 습도)을 점검하고 이상이 없는지 확인하세요."
     elif unknown_mode:
-        action = (
-            "현재 식물의 환경 데이터(토양 수분, 조도, 온도, 습도)를 측정하여 "
-            "추가 정보를 제공해주세요."
-        )
+        action = "현재 식물의 환경 데이터(토양 수분, 조도, 온도, 습도)를 측정하여 추가 정보를 제공해주세요."
     else:
         _actions = [
             "오늘 중으로 식물의 토양 수분을 확인하고, 필요 시 적절히 관리해주세요.",
@@ -124,12 +116,7 @@ def _build_response(request: LLMRequest) -> str:
             "확정적인 진단이나 약제 처방은 전문 농업 기관에 문의하시기 바랍니다."
         )
 
-    return (
-        f"[결론] {conclusion}\n\n"
-        f"[근거] {basis}\n\n"
-        f"[행동] {action}\n\n"
-        f"[주의] {caution}"
-    )
+    return f"[결론] {conclusion}\n\n[근거] {basis}\n\n[행동] {action}\n\n[주의] {caution}"
 
 
 # ---------------------------------------------------------------------------
@@ -142,9 +129,7 @@ class MockLLMClient:
 
     async def complete(self, request: LLMRequest) -> LLMResponse:
         if request.stream:
-            raise StreamingNotSupportedError(
-                "Streaming is not supported in this implementation."
-            )
+            raise StreamingNotSupportedError("Streaming is not supported in this implementation.")
 
         content = _build_response(request)
 

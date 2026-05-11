@@ -65,8 +65,7 @@ def format_companion_answer(resp: CompanionRecommendationResponse | None) -> Par
 
     # [근거]
     근거_lines = [
-        f"현재 환경 데이터 기반 분석 "
-        f"({'스냅샷 있음' if resp.environment_available else '스냅샷 없음'}) 결과:"
+        f"현재 환경 데이터 기반 분석 ({'스냅샷 있음' if resp.environment_available else '스냅샷 없음'}) 결과:"
     ]
     for i, rec in enumerate(recs[:3], 1):
         reasons_short = "; ".join(rec.match_reasons[:2]) if rec.match_reasons else "조건 충족"
@@ -81,20 +80,11 @@ def format_companion_answer(resp: CompanionRecommendationResponse | None) -> Par
     행동 = "\n".join(행동_lines)
 
     # [주의]
-    all_cautions: list[str] = list(
-        dict.fromkeys(
-            note
-            for rec in recs
-            for note in rec.caution_notes
-        )
-    )
+    all_cautions: list[str] = list(dict.fromkeys(note for rec in recs for note in rec.caution_notes))
     if all_cautions:
         주의 = "일부 추천 식물 주의 사항: " + "; ".join(all_cautions)
     else:
-        주의 = (
-            "현재 안전 경고 사항이 없습니다. "
-            "새 식물 도입 후 기존 식물 상태를 모니터링하세요."
-        )
+        주의 = "현재 안전 경고 사항이 없습니다. 새 식물 도입 후 기존 식물 상태를 모니터링하세요."
 
     return ParsedAnswer(결론=결론, 근거=근거, 행동=행동, 주의=주의)
 
@@ -127,9 +117,7 @@ class CompanionRecommendationService:
         if plant is None:
             raise PlantNotFoundError(f"plant {plant_id} not found")
         if plant.user_id != user_id:
-            raise PlantOwnershipError(
-                f"plant {plant_id} is not owned by user {user_id}"
-            )
+            raise PlantOwnershipError(f"plant {plant_id} is not owned by user {user_id}")
 
         # ---- 2. current room environment ---------------------------------
         snapshot = await self._load_latest_snapshot(plant_id)
@@ -143,14 +131,11 @@ class CompanionRecommendationService:
             candidates,
             env,
             current_species_id=plant.species_profile_id,
-            top_k=len(candidates),   # score all; we post-filter below
+            top_k=len(candidates),  # score all; we post-filter below
         )
 
         # ---- 5. keep only fully compatible (all assessed dims match), respect top_k
-        compatible = [
-            r for r in all_results
-            if r.assessed_dimensions > 0 and r.score == 1.0
-        ][:top_k]
+        compatible = [r for r in all_results if r.assessed_dimensions > 0 and r.score == 1.0][:top_k]
 
         items = [
             CompanionRecommendationItem(
@@ -177,9 +162,7 @@ class CompanionRecommendationService:
 
     # ------------------------------------------------------------------
 
-    async def _load_latest_snapshot(
-        self, plant_id: uuid.UUID
-    ) -> EnvironmentSnapshot | None:
+    async def _load_latest_snapshot(self, plant_id: uuid.UUID) -> EnvironmentSnapshot | None:
         result = await self.session.execute(
             select(EnvironmentSnapshot)
             .where(EnvironmentSnapshot.plant_id == plant_id)
@@ -193,18 +176,9 @@ class CompanionRecommendationService:
         if snapshot is None:
             return None
         return RoomEnvironment(
-            light_avg_lux=(
-                float(snapshot.light_avg_lux)
-                if snapshot.light_avg_lux is not None else None
-            ),
-            humidity_avg_pct=(
-                float(snapshot.humidity_avg_pct)
-                if snapshot.humidity_avg_pct is not None else None
-            ),
-            temperature_avg_c=(
-                float(snapshot.temperature_avg_c)
-                if snapshot.temperature_avg_c is not None else None
-            ),
+            light_avg_lux=(float(snapshot.light_avg_lux) if snapshot.light_avg_lux is not None else None),
+            humidity_avg_pct=(float(snapshot.humidity_avg_pct) if snapshot.humidity_avg_pct is not None else None),
+            temperature_avg_c=(float(snapshot.temperature_avg_c) if snapshot.temperature_avg_c is not None else None),
         )
 
     async def _load_candidates(self) -> list[CompanionCandidate]:
@@ -218,24 +192,12 @@ class CompanionRecommendationService:
             species_id=row.id,
             scientific_name=row.scientific_name or "",
             common_name=row.common_name or row.korean_name,
-            light_min_lux=(
-                float(row.light_min_lux) if row.light_min_lux is not None else None
-            ),
-            light_max_lux=(
-                float(row.light_max_lux) if row.light_max_lux is not None else None
-            ),
-            humidity_min_pct=(
-                float(row.humidity_min_pct) if row.humidity_min_pct is not None else None
-            ),
-            humidity_max_pct=(
-                float(row.humidity_max_pct) if row.humidity_max_pct is not None else None
-            ),
-            temperature_min_c=(
-                float(row.temperature_min_c) if row.temperature_min_c is not None else None
-            ),
-            temperature_max_c=(
-                float(row.temperature_max_c) if row.temperature_max_c is not None else None
-            ),
+            light_min_lux=(float(row.light_min_lux) if row.light_min_lux is not None else None),
+            light_max_lux=(float(row.light_max_lux) if row.light_max_lux is not None else None),
+            humidity_min_pct=(float(row.humidity_min_pct) if row.humidity_min_pct is not None else None),
+            humidity_max_pct=(float(row.humidity_max_pct) if row.humidity_max_pct is not None else None),
+            temperature_min_c=(float(row.temperature_min_c) if row.temperature_min_c is not None else None),
+            temperature_max_c=(float(row.temperature_max_c) if row.temperature_max_c is not None else None),
             is_toxic=bool(meta.get("is_toxic", False)),
             toxic_to_pets=bool(meta.get("toxic_to_pets", False)),
             toxic_to_children=bool(meta.get("toxic_to_children", False)),

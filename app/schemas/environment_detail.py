@@ -15,7 +15,7 @@ class MetricStats(BaseModel):
 
 
 class WindowSnapshot(BaseModel):
-    window: str                 # "latest" | "24h" | "7d"
+    window: str  # "latest" | "24h" | "7d"
     window_start: datetime
     window_end: datetime
     temperature_c: MetricStats
@@ -33,7 +33,7 @@ class EnvironmentDetailResponse(BaseModel):
     plant_id: uuid.UUID
     nickname: str
     room_name: str | None
-    latest: WindowSnapshot | None       # null when no snapshot exists
+    latest: WindowSnapshot | None  # null when no snapshot exists
     summary_24h: WindowSnapshot | None
     summary_7d: WindowSnapshot | None
     character_explanation: CharacterExplanation | None  # null when no character history

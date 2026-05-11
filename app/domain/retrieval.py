@@ -18,8 +18,8 @@ ALL_RAG_LAYERS: tuple[RagLayer, ...] = (
 
 # Which ChunkKinds are searched per RAG layer
 RAG_LAYER_TO_CHUNK_KINDS: dict[str, tuple[ChunkKind, ...]] = {
-    "species_profile":        ("identity", "visual_trait", "placement"),
-    "care_knowledge":         ("care_requirement", "seasonal_watering"),
+    "species_profile": ("identity", "visual_trait", "placement"),
+    "care_knowledge": ("care_requirement", "seasonal_watering"),
     "pest_disease_reference": ("pest_reference",),
 }
 

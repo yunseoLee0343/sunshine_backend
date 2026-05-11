@@ -16,7 +16,6 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-
 # ---------------------------------------------------------------------------
 # Component evidence types (all use plain JSON-serialisable Python types)
 # ---------------------------------------------------------------------------
@@ -64,7 +63,7 @@ class ChunkEvidence:
 
 @dataclass
 class ForwardContext:
-    plant_id: str                        # UUID as str
+    plant_id: str  # UUID as str
     user_id: str
     question: str
     intent: str
@@ -76,7 +75,8 @@ class ForwardContext:
     rule_reason_codes: list[str]
     rule_primary_action: str
     retrieved_chunks: list[ChunkEvidence]
-    source_coverage: dict[str, bool]     # layer → at least one chunk retrieved
+    source_coverage: dict[str, bool]  # layer → at least one chunk retrieved
+    visual_facts: list[str] = field(default_factory=list)
     # Computed last — not included in the hash input itself
     evidence_hash: str = field(default="", compare=False)
 
@@ -99,6 +99,7 @@ class ForwardContext:
         rule_primary_action: str,
         retrieved_chunks: list[ChunkEvidence],
         source_coverage: dict[str, bool],
+        visual_facts: list[str] | None = None,
     ) -> ForwardContext:
         ctx = cls(
             plant_id=str(plant_id),
@@ -114,6 +115,7 @@ class ForwardContext:
             rule_primary_action=rule_primary_action,
             retrieved_chunks=retrieved_chunks,
             source_coverage=source_coverage,
+            visual_facts=list(visual_facts) if visual_facts else [],
         )
         ctx.evidence_hash = _compute_hash(ctx)
         return ctx

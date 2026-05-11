@@ -11,7 +11,6 @@ import pytest
 from app.models.plant import Plant
 from app.models.plant_character import PlantCharacter
 from app.rules.schemas import RuleEngineResult
-from app.schemas.home import CharacterSummary, EnvironmentBlock, PlantHomeCard
 
 _NOW = datetime(2026, 5, 10, 12, 0, 0, tzinfo=UTC)
 _USER = uuid.uuid4()
@@ -204,9 +203,7 @@ async def test_build_card_rule_engine_always_called() -> None:
     svc._rule_repo.get_latest_snapshot = AsyncMock(return_value=None)
 
     with patch("app.services.home_card_service._ENGINE") as mock_engine:
-        mock_engine.evaluate.return_value = _make_rule_result(
-            care_status="needs_action", primary_action="water"
-        )
+        mock_engine.evaluate.return_value = _make_rule_result(care_status="needs_action", primary_action="water")
         card = await svc._build_card(plant)
         mock_engine.evaluate.assert_called_once()
 

@@ -71,15 +71,11 @@ class HomeCardService:
 
         # Rule Engine inputs ---------------------------------------------------
         thresholds: SpeciesThresholds = (
-            (await self._rule_repo.get_thresholds(plant.species_profile_id))
-            if plant.species_profile_id
-            else None
+            (await self._rule_repo.get_thresholds(plant.species_profile_id)) if plant.species_profile_id else None
         ) or SpeciesThresholds()
 
         since = now - timedelta(days=7)
-        care_logs = await self._rule_repo.get_recent_care_logs(
-            plant.id, since=since, now=now
-        )
+        care_logs = await self._rule_repo.get_recent_care_logs(plant.id, since=since, now=now)
         latest_snap = await self._rule_repo.get_latest_snapshot(plant.id, before=now)
 
         # Environment block (null when no DB snapshot) -------------------------
@@ -119,9 +115,7 @@ class HomeCardService:
         cards = [await self._build_card(p) for p in plants]
         return HomeResponse(user_id=user_id, plants=cards)
 
-    async def get_plant_card(
-        self, plant_id: uuid.UUID, user_id: uuid.UUID
-    ) -> PlantHomeCard | None:
+    async def get_plant_card(self, plant_id: uuid.UUID, user_id: uuid.UUID) -> PlantHomeCard | None:
         """Return None when plant doesn't exist or belongs to another user."""
         plant = await self._home_repo.get_plant_for_user(plant_id, user_id)
         if plant is None:

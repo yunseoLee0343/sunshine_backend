@@ -9,8 +9,8 @@ Precondition:
 
 import os
 import uuid
-from datetime import UTC, datetime
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 
 import pytest
 import pytest_asyncio
@@ -143,15 +143,11 @@ async def _cleanup_test_rows(
         plant_ids = list(result.scalars().all())
 
     if plant_ids:
-        await session.execute(
-            delete(PlantCharacter).where(PlantCharacter.plant_id.in_(plant_ids))
-        )
+        await session.execute(delete(PlantCharacter).where(PlantCharacter.plant_id.in_(plant_ids)))
         await session.execute(delete(Plant).where(Plant.id.in_(plant_ids)))
 
     if species_ids:
-        await session.execute(
-            delete(SpeciesProfile).where(SpeciesProfile.id.in_(species_ids))
-        )
+        await session.execute(delete(SpeciesProfile).where(SpeciesProfile.id.in_(species_ids)))
 
     if user_ids:
         await session.execute(delete(User).where(User.id.in_(user_ids)))
@@ -208,9 +204,7 @@ async def test_post_plants_persists_plant_and_initial_character(
         assert persisted_plant.nickname == "초록이"
         assert persisted_plant.room_name == "거실"
 
-        result = await db_session.execute(
-            select(PlantCharacter).where(PlantCharacter.plant_id == plant_id)
-        )
+        result = await db_session.execute(select(PlantCharacter).where(PlantCharacter.plant_id == plant_id))
         persisted_character = result.scalar_one_or_none()
 
         assert persisted_character is not None
@@ -381,9 +375,7 @@ async def test_species_candidates_reads_species_catalog_from_db(
 
         assert "candidates" in body
 
-        candidates_by_id = {
-            uuid.UUID(item["species_profile_id"]): item for item in body["candidates"]
-        }
+        candidates_by_id = {uuid.UUID(item["species_profile_id"]): item for item in body["candidates"]}
 
         assert species_a.id in candidates_by_id
         assert species_b.id in candidates_by_id

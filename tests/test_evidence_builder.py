@@ -11,16 +11,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.domain.evidence import (
-    CareLogEvidence,
     CharacterEvidence,
     ChunkEvidence,
     ForwardContext,
     SnapshotEvidence,
-    _compute_hash,
 )
 from app.schemas.evidence_bundle import EvidenceBuildRequest
 from app.services.evidence_builder import _compute_coverage
-
 
 # ---------------------------------------------------------------------------
 # ForwardContext.build + evidence_hash
@@ -103,8 +100,11 @@ def test_to_dict_is_json_serialisable() -> None:
 
 def test_character_evidence_is_frozen() -> None:
     c = CharacterEvidence(
-        mood="happy", expression="😊", status_message="Good",
-        primary_action="none", reason_code="good",
+        mood="happy",
+        expression="😊",
+        status_message="Good",
+        primary_action="none",
+        reason_code="good",
     )
     with pytest.raises((AttributeError, TypeError)):
         c.mood = "sad"  # type: ignore[misc]
@@ -173,6 +173,7 @@ def test_compute_coverage_false_when_no_matching_chunk() -> None:
 
 def test_compute_coverage_covers_all_requested_layers() -> None:
     from app.domain.retrieval import ALL_RAG_LAYERS
+
     cov = _compute_coverage(list(ALL_RAG_LAYERS), [])
     assert set(cov.keys()) == set(ALL_RAG_LAYERS)
     assert all(v is False for v in cov.values())
@@ -189,9 +190,7 @@ def test_compute_coverage_partial() -> None:
             rank=1,
         )
     ]
-    cov = _compute_coverage(
-        ["care_knowledge", "pest_disease_reference"], chunks
-    )
+    cov = _compute_coverage(["care_knowledge", "pest_disease_reference"], chunks)
     assert cov["pest_disease_reference"] is True
     assert cov["care_knowledge"] is False
 
@@ -203,6 +202,7 @@ def test_compute_coverage_partial() -> None:
 
 def test_evidence_build_request_defaults_rag_layers() -> None:
     from app.domain.retrieval import ALL_RAG_LAYERS
+
     req = EvidenceBuildRequest(
         plant_id=uuid.uuid4(),
         user_id=uuid.uuid4(),
@@ -214,6 +214,7 @@ def test_evidence_build_request_defaults_rag_layers() -> None:
 
 def test_evidence_build_request_rejects_extra_fields() -> None:
     import pydantic
+
     with pytest.raises(pydantic.ValidationError):
         EvidenceBuildRequest(
             plant_id=uuid.uuid4(),
@@ -266,8 +267,8 @@ async def test_build_raises_when_plant_not_found() -> None:
 
 @pytest.mark.asyncio
 async def test_build_returns_from_cache_true_on_duplicate() -> None:
-    from app.models.plant import Plant
     from app.models.evidence_bundle import EvidenceBundle
+    from app.models.plant import Plant
     from app.services.evidence_builder import EvidenceBuilderService
 
     plant_id = uuid.uuid4()
@@ -282,6 +283,7 @@ async def test_build_returns_from_cache_true_on_duplicate() -> None:
     session.flush = AsyncMock()
 
     get_calls = []
+
     async def fake_get(model, key):
         get_calls.append(model)
         if model is Plant:
@@ -299,13 +301,19 @@ async def test_build_returns_from_cache_true_on_duplicate() -> None:
     svc = EvidenceBuilderService(session)
 
     # Patch the rule engine to return an empty result
-    with patch.object(svc, '_run_rules', new=AsyncMock(return_value={
-        "evidence_facts": {},
-        "reason_codes": [],
-        "primary_action": "none",
-    })):
+    with patch.object(
+        svc,
+        "_run_rules",
+        new=AsyncMock(
+            return_value={
+                "evidence_facts": {},
+                "reason_codes": [],
+                "primary_action": "none",
+            }
+        ),
+    ):
         # Patch evidence_repo to simulate "already exists"
-        with patch.object(svc._evidence_repo, 'get_by_hash', new=AsyncMock(return_value=fake_bundle)):
+        with patch.object(svc._evidence_repo, "get_by_hash", new=AsyncMock(return_value=fake_bundle)):
             req = EvidenceBuildRequest(
                 plant_id=plant_id,
                 user_id=uuid.uuid4(),
@@ -352,13 +360,21 @@ async def test_build_fresh_saves_bundle() -> None:
     svc = EvidenceBuilderService(session)
 
     save_mock = AsyncMock(return_value=MagicMock())
-    with patch.object(svc, '_run_rules', new=AsyncMock(return_value={
-        "evidence_facts": {},
-        "reason_codes": [],
-        "primary_action": "none",
-    })), patch.object(
-        svc._evidence_repo, 'get_by_hash', new=AsyncMock(return_value=None)
-    ), patch.object(svc._evidence_repo, 'save', save_mock):
+    with (
+        patch.object(
+            svc,
+            "_run_rules",
+            new=AsyncMock(
+                return_value={
+                    "evidence_facts": {},
+                    "reason_codes": [],
+                    "primary_action": "none",
+                }
+            ),
+        ),
+        patch.object(svc._evidence_repo, "get_by_hash", new=AsyncMock(return_value=None)),
+        patch.object(svc._evidence_repo, "save", save_mock),
+    ):
         req = EvidenceBuildRequest(
             plant_id=plant_id,
             user_id=uuid.uuid4(),
@@ -378,6 +394,7 @@ async def test_build_fresh_saves_bundle() -> None:
 
 def test_evidence_builder_has_no_llm_or_prompt_imports() -> None:
     import app.services.evidence_builder as mod
+
     src = open(mod.__file__, encoding="utf-8").read()
     for forbidden in ("openai", "anthropic", "PromptBuilder", "torch"):
         assert forbidden not in src, f"Forbidden: {forbidden!r}"
@@ -390,11 +407,13 @@ def test_evidence_builder_has_no_llm_or_prompt_imports() -> None:
 
 def test_migration_0006_exists() -> None:
     from pathlib import Path
+
     assert Path("alembic/versions/0006_ticket15_evidence_bundles.py").exists()
 
 
 def test_migration_0006_has_evidence_bundles() -> None:
     from pathlib import Path
+
     src = Path("alembic/versions/0006_ticket15_evidence_bundles.py").read_text(encoding="utf-8")
     assert "evidence_bundles" in src
     assert "def upgrade" in src

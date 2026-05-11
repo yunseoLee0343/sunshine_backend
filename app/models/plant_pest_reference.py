@@ -19,8 +19,6 @@ class PlantPestReference(Base):
     )
     pest_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     disease_text: Mapped[str | None] = mapped_column(Text, nullable=True)
-    parsed_pest_terms: Mapped[list] = mapped_column(
-        JSONB, nullable=False, server_default="[]"
-    )
+    parsed_pest_terms: Mapped[list] = mapped_column(JSONB, nullable=False, server_default="[]")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

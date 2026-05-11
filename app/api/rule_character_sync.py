@@ -14,7 +14,6 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import AsyncSessionLocal
 from app.models.plant import Plant
@@ -38,9 +37,7 @@ async def sync_rule_to_character(plant_id: uuid.UUID) -> JSONResponse:
         repo = RuleInputRepository(session)
 
         thresholds = (
-            await repo.get_thresholds(plant.species_profile_id)
-            if plant.species_profile_id
-            else None
+            await repo.get_thresholds(plant.species_profile_id) if plant.species_profile_id else None
         ) or SpeciesThresholds()
 
         snapshot = await repo.get_latest_snapshot(plant_id, before=now) or LatestSnapshot()
@@ -59,15 +56,17 @@ async def sync_rule_to_character(plant_id: uuid.UUID) -> JSONResponse:
         row = await svc.sync(rule_result, now=now)
         await session.commit()
 
-    return JSONResponse(content={
-        "id": str(row.id),
-        "plant_id": str(row.plant_id),
-        "mood": row.mood,
-        "expression": row.expression,
-        "status_message": row.status_message,
-        "primary_action": row.primary_action,
-        "reason_code": row.reason_code,
-        "created_at": row.created_at.isoformat(),
-        "rule_care_status": rule_result.care_status,
-        "rule_primary_action": rule_result.primary_action,
-    })
+    return JSONResponse(
+        content={
+            "id": str(row.id),
+            "plant_id": str(row.plant_id),
+            "mood": row.mood,
+            "expression": row.expression,
+            "status_message": row.status_message,
+            "primary_action": row.primary_action,
+            "reason_code": row.reason_code,
+            "created_at": row.created_at.isoformat(),
+            "rule_care_status": rule_result.care_status,
+            "rule_primary_action": rule_result.primary_action,
+        }
+    )

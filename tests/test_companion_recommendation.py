@@ -19,7 +19,6 @@ from app.services.companion_recommendation_service import (
     format_companion_answer,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -199,22 +198,33 @@ def test_format_duplicate_cautions_deduplicated() -> None:
     sid1, sid2 = uuid.uuid4(), uuid.uuid4()
     recs = [
         CompanionRecommendationItem(
-            species_id=sid1, common_name="A", scientific_name="A",
-            compatibility_score=0.9, assessed_dimensions=3,
-            match_reasons=[], caution_notes=["독성 식물 — 취급 주의 필요"],
+            species_id=sid1,
+            common_name="A",
+            scientific_name="A",
+            compatibility_score=0.9,
+            assessed_dimensions=3,
+            match_reasons=[],
+            caution_notes=["독성 식물 — 취급 주의 필요"],
             is_compatible=True,
         ),
         CompanionRecommendationItem(
-            species_id=sid2, common_name="B", scientific_name="B",
-            compatibility_score=0.8, assessed_dimensions=3,
-            match_reasons=[], caution_notes=["독성 식물 — 취급 주의 필요"],
+            species_id=sid2,
+            common_name="B",
+            scientific_name="B",
+            compatibility_score=0.8,
+            assessed_dimensions=3,
+            match_reasons=[],
+            caution_notes=["독성 식물 — 취급 주의 필요"],
             is_compatible=True,
         ),
     ]
     resp = CompanionRecommendationResponse(
-        plant_id=uuid.uuid4(), current_species_id=None,
-        environment_available=True, candidates_assessed=2,
-        recommendations=recs, source_species_ids=[sid1, sid2],
+        plant_id=uuid.uuid4(),
+        current_species_id=None,
+        environment_available=True,
+        candidates_assessed=2,
+        recommendations=recs,
+        source_species_ids=[sid1, sid2],
     )
     parsed = format_companion_answer(resp)
     assert parsed.주의.count("독성 식물 — 취급 주의 필요") == 1
@@ -258,7 +268,7 @@ async def test_service_returns_response() -> None:
     session.get = AsyncMock(return_value=plant)
 
     snap = _snapshot_mock()
-    species = _species_mock(sid=uuid.uuid4())   # different species — compatible
+    species = _species_mock(sid=uuid.uuid4())  # different species — compatible
 
     snap_result = MagicMock()
     snap_result.scalar_one_or_none.return_value = snap
@@ -390,8 +400,8 @@ async def test_service_source_species_ids_match_recommendations() -> None:
 
 @pytest.mark.asyncio
 async def test_service_plant_not_found_raises() -> None:
-    from app.services.evidence_builder import PlantNotFoundError
     from app.services.companion_recommendation_service import CompanionRecommendationService
+    from app.services.evidence_builder import PlantNotFoundError
 
     session = _make_session()
     session.get = AsyncMock(return_value=None)
@@ -435,9 +445,7 @@ async def test_service_toxicity_flags_in_caution_notes() -> None:
     session.get = AsyncMock(return_value=plant)
 
     snap = _snapshot_mock()
-    toxic_species = _species_mock(
-        metadata_json={"is_toxic": True, "toxic_to_pets": True}
-    )
+    toxic_species = _species_mock(metadata_json={"is_toxic": True, "toxic_to_pets": True})
 
     snap_result = MagicMock()
     snap_result.scalar_one_or_none.return_value = snap
@@ -462,8 +470,8 @@ async def test_service_toxicity_flags_in_caution_notes() -> None:
 
 @pytest.mark.asyncio
 async def test_orchestrator_companion_intent_returns_response() -> None:
-    from app.services.chat_orchestrator import ChatOrchestrator
     from app.schemas.chat_answer import ChatAnswerResponse
+    from app.services.chat_orchestrator import ChatOrchestrator
 
     plant_id = uuid.uuid4()
     user_id = uuid.uuid4()
@@ -499,8 +507,8 @@ async def test_orchestrator_companion_intent_returns_response() -> None:
 
 @pytest.mark.asyncio
 async def test_orchestrator_companion_persists_with_companion_profile() -> None:
-    from app.services.chat_orchestrator import ChatOrchestrator
     from app.models.llm_run import LlmRun
+    from app.services.chat_orchestrator import ChatOrchestrator
 
     plant_id = uuid.uuid4()
     user_id = uuid.uuid4()
@@ -527,11 +535,7 @@ async def test_orchestrator_companion_persists_with_companion_profile() -> None:
             request_id=request_id,
         )
 
-    added_profiles = [
-        call.args[0].profile
-        for call in session.add.call_args_list
-        if isinstance(call.args[0], LlmRun)
-    ]
+    added_profiles = [call.args[0].profile for call in session.add.call_args_list if isinstance(call.args[0], LlmRun)]
     assert "companion_orchestrator" in added_profiles
 
 
@@ -588,9 +592,7 @@ async def test_orchestrator_companion_service_error_returns_fallback() -> None:
         patch("app.services.chat_orchestrator.CompanionRecommendationService") as mock_svc_cls,
     ):
         mock_cls.classify.return_value = ("companion_plant_question", 0.9, "rule")
-        mock_svc_cls.return_value.recommend = AsyncMock(
-            side_effect=PlantNotFoundError("not found")
-        )
+        mock_svc_cls.return_value.recommend = AsyncMock(side_effect=PlantNotFoundError("not found"))
 
         resp = await orchestrator.run(
             session,

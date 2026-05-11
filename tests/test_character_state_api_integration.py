@@ -117,9 +117,7 @@ def test_get_plant_detail_includes_latest_character_block() -> None:
         ),
     )
     with patch(f"{_SVC_PATH}.get_plant", new=AsyncMock(return_value=card)):
-        status, body = asyncio.run(
-            _get(f"/plants/{plant_id}", params={"user_id": str(user_id)})
-        )
+        status, body = asyncio.run(_get(f"/plants/{plant_id}", params={"user_id": str(user_id)}))
     assert status == 200
     ch = body["plant"]["character"]
     assert ch["mood"] == "thirsty"

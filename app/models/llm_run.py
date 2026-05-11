@@ -11,9 +11,7 @@ class LlmRun(Base):
     __tablename__ = "llm_runs"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    request_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("chat_requests.id"), nullable=False
-    )
+    request_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("chat_requests.id"), nullable=False)
     profile: Mapped[str | None] = mapped_column(Text, nullable=True)
     model_name: Mapped[str | None] = mapped_column(Text, nullable=True)
     prompt_hash: Mapped[str | None] = mapped_column(Text, nullable=True)

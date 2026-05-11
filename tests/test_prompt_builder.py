@@ -14,15 +14,13 @@ from app.domain.evidence import (
     ForwardContext,
     SnapshotEvidence,
 )
-from app.domain.prompt_build_result import PromptBuildResult, build_prompt_result
+from app.domain.prompt_build_result import build_prompt_result
 from app.services.prompt_builder import (
     _GR_PEST,
     _GR_RULE_AUTHORITY,
     _GR_UNKNOWN,
     PromptBuilder,
-    _select_guardrails,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -64,7 +62,7 @@ def test_prompt_build_result_hash_is_sha256_of_system_prompt() -> None:
         intent="watering_question",
         guardrails_applied=[],
     )
-    expected = hashlib.sha256("test prompt".encode()).hexdigest()
+    expected = hashlib.sha256(b"test prompt").hexdigest()
     assert r.prompt_hash == expected
 
 
@@ -252,9 +250,11 @@ def test_intent_appears_in_prompt() -> None:
 
 def test_character_state_rendered_when_present() -> None:
     char = CharacterEvidence(
-        mood="sad", expression="😢",
+        mood="sad",
+        expression="😢",
         status_message="물이 부족해요",
-        primary_action="water", reason_code="low_soil_moisture",
+        primary_action="water",
+        reason_code="low_soil_moisture",
     )
     ctx = _ctx(character=char)
     r = _builder.build(ctx)
@@ -324,12 +324,20 @@ def test_rule_evidence_facts_sorted_in_prompt() -> None:
 
 def test_chunks_rendered_in_rank_order() -> None:
     c1 = ChunkEvidence(
-        chunk_document_id=str(uuid.uuid4()), plant_knowledge_id=str(uuid.uuid4()),
-        chunk_kind="care_requirement", chunk_text="관리 정보", similarity_score=0.9, rank=1,
+        chunk_document_id=str(uuid.uuid4()),
+        plant_knowledge_id=str(uuid.uuid4()),
+        chunk_kind="care_requirement",
+        chunk_text="관리 정보",
+        similarity_score=0.9,
+        rank=1,
     )
     c2 = ChunkEvidence(
-        chunk_document_id=str(uuid.uuid4()), plant_knowledge_id=str(uuid.uuid4()),
-        chunk_kind="seasonal_watering", chunk_text="계절별 물주기", similarity_score=0.8, rank=2,
+        chunk_document_id=str(uuid.uuid4()),
+        plant_knowledge_id=str(uuid.uuid4()),
+        chunk_kind="seasonal_watering",
+        chunk_text="계절별 물주기",
+        similarity_score=0.8,
+        rank=2,
     )
     ctx = _ctx(
         retrieved_chunks=[c2, c1],  # intentionally reversed order
@@ -365,6 +373,7 @@ def test_user_turn_matches_question() -> None:
 
 def test_prompt_builder_has_no_llm_imports() -> None:
     import app.services.prompt_builder as mod
+
     src = open(mod.__file__, encoding="utf-8").read()
     for forbidden in ("openai", "anthropic", "requests", "httpx", "torch"):
         assert forbidden not in src, f"Forbidden import: {forbidden!r}"
@@ -372,6 +381,7 @@ def test_prompt_builder_has_no_llm_imports() -> None:
 
 def test_prompt_build_result_has_no_llm_imports() -> None:
     import app.domain.prompt_build_result as mod
+
     src = open(mod.__file__, encoding="utf-8").read()
     for forbidden in ("openai", "anthropic", "requests", "httpx"):
         assert forbidden not in src, f"Forbidden import: {forbidden!r}"

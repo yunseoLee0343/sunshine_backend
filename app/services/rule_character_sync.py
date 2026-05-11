@@ -6,7 +6,6 @@ Always appends a new plant_characters row; never updates or deletes.
 
 from __future__ import annotations
 
-import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession

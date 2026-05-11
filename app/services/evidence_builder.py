@@ -33,8 +33,8 @@ from app.models.retrieval_result_chunk import RetrievalResultChunk
 from app.repositories.evidence_repository import EvidenceRepository
 from app.repositories.rule_input_repository import RuleInputRepository
 from app.rules.types import LatestSnapshot, SpeciesThresholds
-from app.services.rule_engine import RuleEngine
 from app.schemas.evidence_bundle import EvidenceBuildRequest
+from app.services.rule_engine import RuleEngine
 
 _RULE_ENGINE = RuleEngine()
 _CARE_LOG_LOOKBACK_DAYS = 14
@@ -51,9 +51,7 @@ class EvidenceBuilderService:
         self._rule_repo = RuleInputRepository(session)
         self._evidence_repo = EvidenceRepository(session)
 
-    async def build(
-        self, req: EvidenceBuildRequest
-    ) -> tuple[ForwardContext, bool]:
+    async def build(self, req: EvidenceBuildRequest) -> tuple[ForwardContext, bool]:
         """Return (ForwardContext, from_cache)."""
         now = datetime.now(UTC)
 
@@ -84,6 +82,7 @@ class EvidenceBuilderService:
             rule_primary_action=rule_result["primary_action"],
             retrieved_chunks=chunks,
             source_coverage=source_coverage,
+            visual_facts=list(req.visual_facts),
         )
 
         # ---- idempotency --------------------------------------------------
@@ -96,9 +95,7 @@ class EvidenceBuilderService:
 
     # ---------------------------------------------------------------------- helpers
 
-    async def _load_character(
-        self, plant_id: uuid.UUID
-    ) -> CharacterEvidence | None:
+    async def _load_character(self, plant_id: uuid.UUID) -> CharacterEvidence | None:
         result = await self.session.execute(
             select(PlantCharacter)
             .where(PlantCharacter.plant_id == plant_id)
@@ -116,9 +113,7 @@ class EvidenceBuilderService:
             reason_code=row.reason_code,
         )
 
-    async def _load_snapshot(
-        self, plant_id: uuid.UUID
-    ) -> SnapshotEvidence | None:
+    async def _load_snapshot(self, plant_id: uuid.UUID) -> SnapshotEvidence | None:
         result = await self.session.execute(
             select(EnvironmentSnapshot)
             .where(EnvironmentSnapshot.plant_id == plant_id)
@@ -130,19 +125,13 @@ class EvidenceBuilderService:
             return None
         return SnapshotEvidence(
             window=row.window,
-            temperature_avg_c=float(row.temperature_avg_c)
-            if row.temperature_avg_c is not None else None,
-            humidity_avg_pct=float(row.humidity_avg_pct)
-            if row.humidity_avg_pct is not None else None,
-            light_avg_lux=float(row.light_avg_lux)
-            if row.light_avg_lux is not None else None,
-            soil_moisture_avg_pct=float(row.soil_moisture_avg_pct)
-            if row.soil_moisture_avg_pct is not None else None,
+            temperature_avg_c=float(row.temperature_avg_c) if row.temperature_avg_c is not None else None,
+            humidity_avg_pct=float(row.humidity_avg_pct) if row.humidity_avg_pct is not None else None,
+            light_avg_lux=float(row.light_avg_lux) if row.light_avg_lux is not None else None,
+            soil_moisture_avg_pct=float(row.soil_moisture_avg_pct) if row.soil_moisture_avg_pct is not None else None,
         )
 
-    async def _load_care_logs(
-        self, plant_id: uuid.UUID, now: datetime
-    ) -> list[CareLogEvidence]:
+    async def _load_care_logs(self, plant_id: uuid.UUID, now: datetime) -> list[CareLogEvidence]:
         since = now - timedelta(days=_CARE_LOG_LOOKBACK_DAYS)
         result = await self.session.execute(
             select(CareLog)
@@ -159,36 +148,36 @@ class EvidenceBuilderService:
             for row in result.scalars().all()
         ]
 
-    async def _run_rules(
-        self, plant: Plant, now: datetime
-    ) -> dict:
+    async def _run_rules(self, plant: Plant, now: datetime) -> dict:
         """Run the rule engine; return a plain dict of evidence fields.
         Gracefully returns empty values when species/snapshot data is absent.
         """
         thresholds: SpeciesThresholds | None = None
         if plant.species_profile_id is not None:
-            thresholds = await self._rule_repo.get_thresholds(
-                plant.species_profile_id
-            )
+            thresholds = await self._rule_repo.get_thresholds(plant.species_profile_id)
         if thresholds is None:
             thresholds = SpeciesThresholds(
-                water_min_pct=None, water_max_pct=None,
-                light_min_lux=None, light_max_lux=None,
-                humidity_min_pct=None, humidity_max_pct=None,
-                temperature_min_c=None, temperature_max_c=None,
+                water_min_pct=None,
+                water_max_pct=None,
+                light_min_lux=None,
+                light_max_lux=None,
+                humidity_min_pct=None,
+                humidity_max_pct=None,
+                temperature_min_c=None,
+                temperature_max_c=None,
             )
 
         snapshot = await self._rule_repo.get_latest_snapshot(plant.id, before=now)
         if snapshot is None:
             snapshot = LatestSnapshot(
-                soil_moisture_avg_pct=None, light_avg_lux=None,
-                humidity_avg_pct=None, temperature_avg_c=None,
+                soil_moisture_avg_pct=None,
+                light_avg_lux=None,
+                humidity_avg_pct=None,
+                temperature_avg_c=None,
             )
 
         since = now - timedelta(days=_CARE_LOG_LOOKBACK_DAYS)
-        care_logs = await self._rule_repo.get_recent_care_logs(
-            plant.id, since=since, now=now
-        )
+        care_logs = await self._rule_repo.get_recent_care_logs(plant.id, since=since, now=now)
 
         result = _RULE_ENGINE.evaluate(
             plant_id=plant.id,
@@ -203,9 +192,7 @@ class EvidenceBuilderService:
             "primary_action": result.primary_action,
         }
 
-    async def _load_chunks(
-        self, retrieval_run_id: uuid.UUID | None
-    ) -> list[ChunkEvidence]:
+    async def _load_chunks(self, retrieval_run_id: uuid.UUID | None) -> list[ChunkEvidence]:
         if retrieval_run_id is None:
             return []
         result = await self.session.execute(
@@ -226,9 +213,7 @@ class EvidenceBuilderService:
         ]
 
 
-def _compute_coverage(
-    rag_layers: list[str], chunks: list[ChunkEvidence]
-) -> dict[str, bool]:
+def _compute_coverage(rag_layers: list[str], chunks: list[ChunkEvidence]) -> dict[str, bool]:
     retrieved_kinds = {c.chunk_kind for c in chunks}
     coverage: dict[str, bool] = {}
     for layer in rag_layers:

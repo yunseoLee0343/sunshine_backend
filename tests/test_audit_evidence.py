@@ -114,6 +114,15 @@ def _exec_result(obj: object | None) -> MagicMock:
     return result
 
 
+def _exec_result_list(items: list) -> MagicMock:
+    """Mock for execute() results consumed via scalars().all()."""
+    result = MagicMock()
+    scalars_mock = MagicMock()
+    scalars_mock.all.return_value = items
+    result.scalars.return_value = scalars_mock
+    return result
+
+
 # ---------------------------------------------------------------------------
 # _check_hash (unit)
 # ---------------------------------------------------------------------------
@@ -275,7 +284,7 @@ async def test_repo_returns_view_with_evidence() -> None:
     session = _make_session()
     session.get = AsyncMock(return_value=chat)
     session.execute = AsyncMock(
-        side_effect=[_exec_result(run), _exec_result(bundle)]
+        side_effect=[_exec_result(run), _exec_result(bundle), _exec_result_list([]), _exec_result(None)]
     )
 
     repo = AuditRepository(session)
@@ -297,7 +306,8 @@ async def test_repo_skips_bundle_for_companion_intent() -> None:
 
     session = _make_session()
     session.get = AsyncMock(return_value=chat)
-    session.execute = AsyncMock(side_effect=[_exec_result(run)])
+    # companion: LlmRun + healing logs + eval result (EvidenceBundle skipped)
+    session.execute = AsyncMock(side_effect=[_exec_result(run), _exec_result_list([]), _exec_result(None)])
 
     repo = AuditRepository(session)
     view = await repo.get_chat_run_evidence(request_id)
@@ -306,8 +316,8 @@ async def test_repo_skips_bundle_for_companion_intent() -> None:
     assert view.intent == "companion_plant_question"
     assert view.evidence_hash is None
     assert view.sensor_snapshot is None
-    # execute called once only (LlmRun), no second call for EvidenceBundle
-    assert session.execute.call_count == 1
+    # execute called 3 times: LlmRun + healing logs + eval result; EvidenceBundle skipped
+    assert session.execute.call_count == 3
 
 
 @pytest.mark.asyncio
@@ -321,7 +331,9 @@ async def test_repo_view_created_at_matches_chat() -> None:
 
     session = _make_session()
     session.get = AsyncMock(return_value=chat)
-    session.execute = AsyncMock(side_effect=[_exec_result(run), _exec_result(bundle)])
+    session.execute = AsyncMock(
+        side_effect=[_exec_result(run), _exec_result(bundle), _exec_result_list([]), _exec_result(None)]
+    )
 
     repo = AuditRepository(session)
     view = await repo.get_chat_run_evidence(request_id)
@@ -339,8 +351,10 @@ async def test_repo_no_bundle_match_returns_view_without_evidence() -> None:
 
     session = _make_session()
     session.get = AsyncMock(return_value=chat)
-    # LlmRun found, EvidenceBundle not found
-    session.execute = AsyncMock(side_effect=[_exec_result(run), _exec_result(None)])
+    # LlmRun found, EvidenceBundle not found, healing logs empty, eval result not found
+    session.execute = AsyncMock(
+        side_effect=[_exec_result(run), _exec_result(None), _exec_result_list([]), _exec_result(None)]
+    )
 
     repo = AuditRepository(session)
     view = await repo.get_chat_run_evidence(request_id)
@@ -374,7 +388,9 @@ async def test_service_returns_view_when_found() -> None:
 
     session = _make_session()
     session.get = AsyncMock(return_value=chat)
-    session.execute = AsyncMock(side_effect=[_exec_result(run), _exec_result(bundle)])
+    session.execute = AsyncMock(
+        side_effect=[_exec_result(run), _exec_result(bundle), _exec_result_list([]), _exec_result(None)]
+    )
 
     svc = AuditQueryService(session)
     view = await svc.get_evidence(request_id)
@@ -391,7 +407,9 @@ async def test_service_integrity_flag_propagated() -> None:
 
     session = _make_session()
     session.get = AsyncMock(return_value=chat)
-    session.execute = AsyncMock(side_effect=[_exec_result(run), _exec_result(None)])
+    session.execute = AsyncMock(
+        side_effect=[_exec_result(run), _exec_result(None), _exec_result_list([]), _exec_result(None)]
+    )
 
     svc = AuditQueryService(session)
     view = await svc.get_evidence(request_id)

@@ -26,14 +26,10 @@ def parse_device_id(topic: str) -> str:
         )
 
     if not topic.startswith(_PREFIX):
-        raise ValueError(
-            f"invalid topic {topic!r}: must start with {_PREFIX!r}"
-        )
+        raise ValueError(f"invalid topic {topic!r}: must start with {_PREFIX!r}")
 
     device_id = topic[_PREFIX_LEN:]
     if not device_id:
-        raise ValueError(
-            f"invalid topic {topic!r}: device_id segment must not be empty"
-        )
+        raise ValueError(f"invalid topic {topic!r}: device_id segment must not be empty")
 
     return device_id

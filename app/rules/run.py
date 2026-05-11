@@ -21,8 +21,7 @@ from datetime import datetime, timedelta
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Run Rule Engine for a single plant.")
     p.add_argument("--plant-id", required=True, type=uuid.UUID, metavar="UUID")
-    p.add_argument("--now", required=True, metavar="ISO8601",
-                   help="Reference timestamp (timezone-aware).")
+    p.add_argument("--now", required=True, metavar="ISO8601", help="Reference timestamp (timezone-aware).")
     return p.parse_args()
 
 
@@ -35,7 +34,6 @@ def _parse_now(raw: str) -> datetime:
 
 
 async def _run(plant_id: uuid.UUID, now: datetime) -> None:
-    from sqlalchemy import select
 
     from app.db.session import AsyncSessionLocal
     from app.models.plant import Plant
@@ -52,9 +50,7 @@ async def _run(plant_id: uuid.UUID, now: datetime) -> None:
         repo = RuleInputRepository(session)
 
         thresholds = (
-            await repo.get_thresholds(plant.species_profile_id)
-            if plant.species_profile_id
-            else None
+            await repo.get_thresholds(plant.species_profile_id) if plant.species_profile_id else None
         ) or SpeciesThresholds()
 
         snapshot = await repo.get_latest_snapshot(plant_id, before=now) or LatestSnapshot()

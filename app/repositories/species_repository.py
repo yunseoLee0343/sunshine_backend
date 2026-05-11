@@ -21,9 +21,7 @@ class SpeciesRepository:
         return list(result.scalars().all())
 
     async def get_by_id(self, species_id: uuid.UUID) -> SpeciesProfile | None:
-        result = await self.session.execute(
-            select(SpeciesProfile).where(SpeciesProfile.id == species_id)
-        )
+        result = await self.session.execute(select(SpeciesProfile).where(SpeciesProfile.id == species_id))
         return result.scalar_one_or_none()
 
     async def find_by_scientific_name(self, scientific_name: str) -> SpeciesProfile | None:
@@ -33,13 +31,9 @@ class SpeciesRepository:
         return result.scalars().first()
 
     async def find_by_korean_name(self, korean_name: str) -> SpeciesProfile | None:
-        result = await self.session.execute(
-            select(SpeciesProfile).where(SpeciesProfile.korean_name == korean_name)
-        )
+        result = await self.session.execute(select(SpeciesProfile).where(SpeciesProfile.korean_name == korean_name))
         return result.scalars().first()
 
     async def find_by_common_name(self, common_name: str) -> SpeciesProfile | None:
-        result = await self.session.execute(
-            select(SpeciesProfile).where(SpeciesProfile.common_name == common_name)
-        )
+        result = await self.session.execute(select(SpeciesProfile).where(SpeciesProfile.common_name == common_name))
         return result.scalars().first()

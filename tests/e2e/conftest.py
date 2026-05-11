@@ -86,57 +86,33 @@ async def _cleanup_demo(session: AsyncSession) -> None:
         {"pid": DEMO_PLANT_ID},
     )
     await session.execute(
-        text(
-            "DELETE FROM retrieved_chunks WHERE request_id IN "
-            "(SELECT id FROM chat_requests WHERE plant_id = :pid)"
-        ),
+        text("DELETE FROM retrieved_chunks WHERE request_id IN (SELECT id FROM chat_requests WHERE plant_id = :pid)"),
         {"pid": DEMO_PLANT_ID},
     )
     await session.execute(
-        text(
-            "DELETE FROM llm_runs WHERE request_id IN "
-            "(SELECT id FROM chat_requests WHERE plant_id = :pid)"
-        ),
+        text("DELETE FROM llm_runs WHERE request_id IN (SELECT id FROM chat_requests WHERE plant_id = :pid)"),
         {"pid": DEMO_PLANT_ID},
     )
-    await session.execute(
-        delete(ChatRequest).where(ChatRequest.plant_id == DEMO_PLANT_ID)
-    )
+    await session.execute(delete(ChatRequest).where(ChatRequest.plant_id == DEMO_PLANT_ID))
 
     # evidence bundles
-    await session.execute(
-        delete(EvidenceBundle).where(EvidenceBundle.plant_id == DEMO_PLANT_ID)
-    )
+    await session.execute(delete(EvidenceBundle).where(EvidenceBundle.plant_id == DEMO_PLANT_ID))
 
     # retrieval runs — CASCADE removes retrieval_result_chunks
-    await session.execute(
-        delete(RetrievalRun).where(RetrievalRun.user_id == DEMO_USER_ID)
-    )
+    await session.execute(delete(RetrievalRun).where(RetrievalRun.user_id == DEMO_USER_ID))
 
     # knowledge entry — CASCADE removes all knowledge children and chunk docs/embeddings
-    await session.execute(
-        delete(PlantKnowledgeEntry).where(PlantKnowledgeEntry.id == DEMO_KNOWLEDGE_ID)
-    )
+    await session.execute(delete(PlantKnowledgeEntry).where(PlantKnowledgeEntry.id == DEMO_KNOWLEDGE_ID))
 
     # plant data
-    await session.execute(
-        delete(PlantCharacter).where(PlantCharacter.plant_id == DEMO_PLANT_ID)
-    )
-    await session.execute(
-        delete(CareLog).where(CareLog.plant_id == DEMO_PLANT_ID)
-    )
-    await session.execute(
-        delete(EnvironmentSnapshot).where(EnvironmentSnapshot.plant_id == DEMO_PLANT_ID)
-    )
-    await session.execute(
-        delete(SensorReading).where(SensorReading.plant_id == DEMO_PLANT_ID)
-    )
+    await session.execute(delete(PlantCharacter).where(PlantCharacter.plant_id == DEMO_PLANT_ID))
+    await session.execute(delete(CareLog).where(CareLog.plant_id == DEMO_PLANT_ID))
+    await session.execute(delete(EnvironmentSnapshot).where(EnvironmentSnapshot.plant_id == DEMO_PLANT_ID))
+    await session.execute(delete(SensorReading).where(SensorReading.plant_id == DEMO_PLANT_ID))
     await session.execute(delete(Plant).where(Plant.id == DEMO_PLANT_ID))
 
     # species then user
-    await session.execute(
-        delete(SpeciesProfile).where(SpeciesProfile.id.in_(_DEMO_SPECIES_IDS))
-    )
+    await session.execute(delete(SpeciesProfile).where(SpeciesProfile.id.in_(_DEMO_SPECIES_IDS)))
     await session.execute(delete(User).where(User.id == DEMO_USER_ID))
 
 
@@ -147,7 +123,5 @@ async def _cleanup_demo(session: AsyncSession) -> None:
 
 @pytest_asyncio.fixture(scope="module")
 async def client(seed_demo_data) -> AsyncClient:
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as c:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c

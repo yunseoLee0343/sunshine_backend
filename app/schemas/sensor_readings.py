@@ -31,8 +31,7 @@ class SensorReadingRequest(BaseModel):
     def reading_id_charset(cls, v: str) -> str:
         if not _READING_ID_RE.match(v):
             raise ValueError(
-                "reading_id may only contain alphanumeric characters, "
-                "dashes, underscores, colons, and dots"
+                "reading_id may only contain alphanumeric characters, dashes, underscores, colons, and dots"
             )
         return v
 
@@ -53,6 +52,6 @@ class SensorReadingRequest(BaseModel):
 
 
 class SensorReadingResponse(BaseModel):
-    status: str        # "inserted" | "duplicate_ignored"
+    status: str  # "inserted" | "duplicate_ignored"
     ignored: bool
     reading_id: str

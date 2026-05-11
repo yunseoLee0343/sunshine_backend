@@ -18,9 +18,7 @@ class CareLogRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def get_plant_for_user(
-        self, plant_id: uuid.UUID, user_id: uuid.UUID
-    ) -> Plant | None:
+    async def get_plant_for_user(self, plant_id: uuid.UUID, user_id: uuid.UUID) -> Plant | None:
         """Return plant only when it belongs to the requesting user."""
         result = await self.session.execute(
             select(Plant).where(
@@ -35,9 +33,7 @@ class CareLogRepository:
         await self.session.flush()
         return log
 
-    async def list_for_plant(
-        self, plant_id: uuid.UUID, *, limit: int = 50
-    ) -> list[CareLog]:
+    async def list_for_plant(self, plant_id: uuid.UUID, *, limit: int = 50) -> list[CareLog]:
         """Return care logs in descending acted_at order (newest first)."""
         result = await self.session.execute(
             select(CareLog)

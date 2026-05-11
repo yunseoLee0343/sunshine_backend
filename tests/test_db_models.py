@@ -64,9 +64,7 @@ def test_sensor_reading_reading_id_unique() -> None:
 
 
 def test_environment_snapshot_composite_unique() -> None:
-    uqs = [
-        c for c in EnvironmentSnapshot.__table__.constraints if isinstance(c, UniqueConstraint)
-    ]
+    uqs = [c for c in EnvironmentSnapshot.__table__.constraints if isinstance(c, UniqueConstraint)]
     assert uqs, "environment_snapshots must have a UniqueConstraint"
     composite_cols = {col.name for uq in uqs for col in uq.columns}
     assert {"plant_id", "window", "window_start", "window_end"} <= composite_cols

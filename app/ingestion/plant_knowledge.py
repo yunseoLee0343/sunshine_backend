@@ -18,11 +18,8 @@ from pathlib import Path
 
 
 def _parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(
-        description="Ingest plant knowledge from an Excel workbook."
-    )
-    p.add_argument("--file", required=True, metavar="PATH",
-                   help="Path to the .xlsx source file.")
+    p = argparse.ArgumentParser(description="Ingest plant knowledge from an Excel workbook.")
+    p.add_argument("--file", required=True, metavar="PATH", help="Path to the .xlsx source file.")
     return p.parse_args()
 
 
