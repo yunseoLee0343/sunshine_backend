@@ -32,9 +32,7 @@ FORBIDDEN_DIRS = [
 
 @pytest.mark.parametrize("forbidden_dir", FORBIDDEN_DIRS)
 def test_forbidden_directory_absent(forbidden_dir: str) -> None:
-    assert not (ROOT / forbidden_dir).exists(), (
-        f"Forbidden directory exists: {forbidden_dir}"
-    )
+    assert not (ROOT / forbidden_dir).exists(), f"Forbidden directory exists: {forbidden_dir}"
 
 
 # ---------------------------------------------------------------------------
@@ -58,9 +56,7 @@ FORBIDDEN_FILES = [
 
 @pytest.mark.parametrize("forbidden_file", FORBIDDEN_FILES)
 def test_forbidden_file_absent(forbidden_file: str) -> None:
-    assert not (ROOT / forbidden_file).exists(), (
-        f"Forbidden file exists: {forbidden_file}"
-    )
+    assert not (ROOT / forbidden_file).exists(), f"Forbidden file exists: {forbidden_file}"
 
 
 # ---------------------------------------------------------------------------
@@ -118,9 +114,7 @@ _APP_IMPORTS = _collect_imports(_APP_SOURCE)
 
 @pytest.mark.parametrize("lib", FORBIDDEN_LIBS)
 def test_forbidden_library_not_imported(lib: str) -> None:
-    assert lib not in _APP_IMPORTS, (
-        f"Forbidden library '{lib}' is imported in app source"
-    )
+    assert lib not in _APP_IMPORTS, f"Forbidden library '{lib}' is imported in app source"
 
 
 def test_forbidden_libs_not_in_sys_modules_after_app_import() -> None:
@@ -203,9 +197,7 @@ def test_no_inserts_into_forbidden_tables(table: str) -> None:
             continue
         text = path.read_text(encoding="utf-8")
         # Strict pattern: ``add(ModelName(`` indicates a write.
-        assert f"add({model}(" not in text, (
-            f"Forbidden write to {table} via {model} found in {path}"
-        )
+        assert f"add({model}(" not in text, f"Forbidden write to {table} via {model} found in {path}"
 
 
 # ---------------------------------------------------------------------------
@@ -226,9 +218,7 @@ def test_healthz_unchanged_no_character_or_db_check() -> None:
             healthz_lines.append(line)
     body = "\n".join(healthz_lines)
     for forbidden in ("check_db", "character", "rule_engine", "vision", "model"):
-        assert forbidden not in body, (
-            f"/healthz must not reference '{forbidden}'"
-        )
+        assert forbidden not in body, f"/healthz must not reference '{forbidden}'"
 
 
 def test_readyz_does_not_check_character_or_rule_engine() -> None:
@@ -241,9 +231,7 @@ def test_readyz_does_not_check_character_or_rule_engine() -> None:
         '"character_state":',
         '"rule_engine":',
     ):
-        assert forbidden not in main_src, (
-            f"/readyz / main.py must not reference '{forbidden}'"
-        )
+        assert forbidden not in main_src, f"/readyz / main.py must not reference '{forbidden}'"
 
 
 # ---------------------------------------------------------------------------
@@ -267,9 +255,7 @@ def test_pyproject_does_not_declare_forbidden_deps() -> None:
         "sentence-transformers",
     ]
     for dep in forbidden_deps:
-        assert f'"{dep}' not in pyproject, (
-            f"Forbidden dependency '{dep}' declared in pyproject.toml"
-        )
+        assert f'"{dep}' not in pyproject, f"Forbidden dependency '{dep}' declared in pyproject.toml"
 
 
 # ---------------------------------------------------------------------------
