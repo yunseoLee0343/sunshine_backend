@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 // Deterministic demo UUID — mirrors app/seeds/demo_seed.py demo_id('user-001')
-const DEMO_USER_ID = '2a307656-dfbb-55f6-9054-007f2014e4a9'
+const DEMO_USER_ID = '7507fdac-da23-5956-a5a4-9239de655be0'
 
 const client = axios.create({
   baseURL: '/api/v1',

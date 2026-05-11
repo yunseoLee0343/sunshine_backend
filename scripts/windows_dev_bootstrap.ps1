@@ -8,13 +8,17 @@
 
   What it does:
   1. Finds or clones https://github.com/yunseoLee0343/sunshine_backend.git
-  2. Starts backend dependencies and backend API through Docker Compose
-  3. Runs Alembic migrations inside the backend container
-  4. Loads idempotent demo seed data
-  5. Restores frontend/src/api/client.ts to UTF-8 and aligns DEMO_USER_ID with the repo seed user
-  6. Installs frontend npm dependencies
-  7. Starts the Vite frontend dev server
-  8. Opens http://localhost:5173 and http://localhost:8000/docs
+  2. Starts postgres, mqtt, and backend via Docker Compose
+  3. Waits for backend /healthz
+  4. Runs Alembic migrations inside the backend container
+  5. Loads idempotent demo seed data
+  6. Waits for backend /readyz
+  7. Runs /home smoke test with the demo user
+  8. Starts mqtt-ingest
+  9. Restores frontend/src/api/client.ts to UTF-8 no BOM
+  10. Installs frontend npm dependencies (npm ci preferred)
+  11. Starts the Vite frontend dev server
+  12. Opens http://localhost:5173 and http://localhost:8000/docs
 
 .PARAMETER RepoRoot
   Existing repository path. If omitted, the script searches upward from the current directory.
@@ -27,7 +31,7 @@
   Runs git pull in the repository before starting.
 
 .PARAMETER SkipNpmInstall
-  Skips npm install in frontend/.
+  Skips npm install/ci in frontend/.
 
 .PARAMETER ForegroundFrontend
   Runs npm run dev in the current PowerShell window instead of opening a new window.
@@ -57,9 +61,9 @@ Set-StrictMode -Version 2.0
 
 $RepoUrl = "https://github.com/yunseoLee0343/sunshine_backend.git"
 
-# This value is from app/seeds/demo_seed.py via demo_id("user-001")
-# and matches the checked-in frontend/src/api/client.ts in the live repository.
-$SeedDemoUserId = "7923c9bd-80d8-d2d1-1937-b9e0e7e28887"
+# Canonical demo user — uuid.uuid5(UUID("6ba7b810-9dad-11d1-80b4-00c04fd430c8"), "sunshine-demo:user-001")
+# Source of truth: app/seeds/demo_seed.py
+$SeedDemoUserId = "7507fdac-da23-5956-a5a4-9239de655be0"
 
 function Write-Step {
   param([string]$Message)
@@ -310,10 +314,11 @@ try {
     Invoke-Compose -Arguments @("down", "-v", "--remove-orphans")
   }
 
-  Write-Step "Starting backend stack with Docker Compose"
-  Invoke-Compose -Arguments @("up", "--build", "-d", "postgres", "mqtt", "backend", "mqtt-ingest")
+  # Start core services first; mqtt-ingest is started after migrations + seed are verified.
+  Write-Step "Starting postgres, mqtt, and backend via Docker Compose"
+  Invoke-Compose -Arguments @("up", "--build", "-d", "postgres", "mqtt", "backend")
 
-  Write-Step "Waiting for backend health endpoint"
+  Write-Step "Waiting for backend /healthz"
   Wait-HttpOk -Url "http://localhost:8000/healthz" -Name "Backend health" -TimeoutSec 180
 
   Write-Step "Running database migrations"
@@ -324,16 +329,34 @@ try {
   Invoke-Compose -Arguments @("exec", "-T", "backend", "python", "-m", "app.seeds.demo_seed")
   Write-Ok "Seed complete"
 
-  Write-Step "Checking backend readiness"
-  Wait-HttpOk -Url "http://localhost:8000/readyz" -Name "Backend readiness" -TimeoutSec 120
+  Write-Step "Waiting for backend /readyz"
+  Wait-HttpOk -Url "http://localhost:8000/readyz" -Name "Backend readiness" -TimeoutSec 60
 
-  Write-Step "Repairing frontend client encoding and demo user"
+  Write-Step "Smoke test: GET /home (demo user)"
+  try {
+    $homeHeaders = @{ "X-User-Id" = $SeedDemoUserId }
+    $homeRes = Invoke-WebRequest -Uri "http://localhost:8000/home" -Headers $homeHeaders -UseBasicParsing -TimeoutSec 10
+    if ($homeRes.StatusCode -eq 200) {
+      Write-Ok "/home returned 200"
+    } else {
+      Write-Host "WARNING: /home returned $($homeRes.StatusCode)" -ForegroundColor Yellow
+    }
+  } catch {
+    Write-Host "WARNING: /home smoke test failed: $($_.Exception.Message)" -ForegroundColor Yellow
+  }
+
+  Write-Step "Starting mqtt-ingest"
+  Invoke-Compose -Arguments @("up", "-d", "mqtt-ingest")
+  Write-Ok "mqtt-ingest started"
+
+  Write-Step "Repairing frontend client encoding"
   $clientPath = Join-Path $root "frontend\src\api\client.ts"
   if (-not (Test-Path $clientPath)) {
     Fail "Missing frontend client file: $clientPath"
   }
 
   $clientText = Read-TextBestEffort -Path $clientPath
+  # Ensure DEMO_USER_ID matches the seed user and file is UTF-8 no BOM.
   $clientText = [Regex]::Replace(
     $clientText,
     "const\s+DEMO_USER_ID\s*=\s*'[^']+'",
@@ -346,7 +369,11 @@ try {
   Push-Location (Join-Path $root "frontend")
   try {
     if (-not $SkipNpmInstall) {
-      Invoke-Checked -FilePath "npm" -Arguments @("install") -ErrorMessage "npm install failed."
+      if (Test-Path "package-lock.json") {
+        Invoke-Checked -FilePath "npm" -Arguments @("ci") -ErrorMessage "npm ci failed."
+      } else {
+        Invoke-Checked -FilePath "npm" -Arguments @("install") -ErrorMessage "npm install failed."
+      }
     } else {
       Write-Host "Skipping npm install because -SkipNpmInstall was provided."
     }

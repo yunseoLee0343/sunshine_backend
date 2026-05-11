@@ -151,7 +151,7 @@ jobs:
       - name: "Smoke: GET /home → 200 (demo user)"
         run: |
           STATUS=$(curl -o /dev/null -sw "%{http_code}" \
-            -H "X-User-Id: 7923c9bd-80d8-d2d1-1937-b9e0e7e28887" \
+            -H "X-User-Id: 7507fdac-da23-5956-a5a4-9239de655be0" \
             http://localhost:8000/home)
           if [ "$STATUS" != "200" ]; then
             echo "❌ /home returned $STATUS"; exit 1

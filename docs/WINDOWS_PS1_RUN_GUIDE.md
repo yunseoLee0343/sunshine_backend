@@ -20,24 +20,27 @@ scripts/windows_dev_bootstrap.ps1
 
 1. 현재 위치 또는 상위 폴더에서 Sunshine 레포 루트를 찾음
 2. 레포가 없으면 `https://github.com/yunseoLee0343/sunshine_backend.git`을 `.\sunshine_backend`로 clone
-3. Docker Compose로 `postgres`, `mqtt`, `backend`, `mqtt-ingest` 실행
-4. backend 컨테이너 안에서 Alembic migration 실행
-5. backend 컨테이너 안에서 demo seed 실행
-6. `frontend/src/api/client.ts`를 UTF-8 no BOM으로 복구/저장
-7. frontend `DEMO_USER_ID`를 현재 repo seed user와 맞춤
-8. `frontend/`에서 `npm install`
-9. Vite dev server 실행
-10. 브라우저로 `http://localhost:5173`, `http://localhost:8000/docs` 열기
+3. Docker Compose로 `postgres`, `mqtt`, `backend` 실행
+4. backend `/healthz` 응답 대기
+5. backend 컨테이너 안에서 Alembic migration 실행
+6. backend 컨테이너 안에서 demo seed 실행
+7. backend `/readyz` 응답 대기
+8. `/home` smoke test (demo user)
+9. `mqtt-ingest` 실행
+10. `frontend/src/api/client.ts`를 UTF-8 no BOM으로 복구/저장
+11. `frontend/`에서 `npm ci` (package-lock.json이 없으면 `npm install`)
+12. Vite dev server 실행
+13. 브라우저로 `http://localhost:5173`, `http://localhost:8000/docs` 열기
 
 ## 왜 frontend UUID를 만지는가
 
 현재 live repo의 `frontend/src/api/client.ts`는 `DEMO_USER_ID`를 export하고, Axios 기본 헤더 `X-User-Id`에 넣습니다.
 
 ```ts
-const DEMO_USER_ID = '7923c9bd-80d8-d2d1-1937-b9e0e7e28887'
+const DEMO_USER_ID = '7507fdac-da23-5956-a5a4-9239de655be0'
 ```
 
-backend seed 소스인 `app/seeds/demo_seed.py`도 `DEMO_USER_ID = demo_id("user-001")` 방식으로 같은 demo user를 생성합니다. 따라서 Windows 스크립트는 frontend client 파일을 UTF-8 no BOM으로 저장하면서 이 UUID를 유지/복구합니다.
+이 값은 `app/seeds/demo_seed.py`의 `demo_id("user-001")`가 생성하는 UUID5 값과 정확히 일치해야 합니다. 스크립트가 `client.ts`를 UTF-8 no BOM으로 재저장할 때 이 UUID를 유지/복구합니다.
 
 이 처리가 필요한 이유는 Windows PowerShell 5.1에서 다음 패턴을 사용하면 TypeScript 파일이 UTF-16으로 저장되어 Vite가 `stream did not contain valid UTF-8` 오류를 낼 수 있기 때문입니다.
 
@@ -86,13 +89,13 @@ Backend docs: http://localhost:8000/docs
 스크립트를 아무 폴더에 두고 실행해도 됩니다. 현재 폴더 아래에 `sunshine_backend`가 없으면 자동으로 clone합니다.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\windows_dev_bootstrap.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\windows_dev_bootstrap.ps1
 ```
 
 특정 위치를 지정하려면:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\windows_dev_bootstrap.ps1 -RepoRoot D:\sunshine_backend
+powershell -ExecutionPolicy Bypass -File .\scripts\windows_dev_bootstrap.ps1 -RepoRoot D:\sunshine_backend
 ```
 
 ## 깨끗한 DB로 다시 시작
@@ -175,7 +178,7 @@ home API smoke test:
 
 ```powershell
 $headers = @{
-  "X-User-Id" = "7923c9bd-80d8-d2d1-1937-b9e0e7e28887"
+  "X-User-Id" = "7507fdac-da23-5956-a5a4-9239de655be0"
 }
 
 Invoke-RestMethod http://localhost:8000/home -Headers $headers
@@ -220,7 +223,7 @@ docker compose down
 
 ### frontend는 뜨는데 API가 403 또는 빈 화면
 
-frontend의 `DEMO_USER_ID`와 backend seed user가 안 맞는 상태일 가능성이 있습니다. 스크립트를 다시 실행하면 `client.ts`의 UUID를 repo seed user로 맞춥니다.
+frontend의 `DEMO_USER_ID`와 backend seed user가 안 맞는 상태일 가능성이 있습니다. 스크립트를 다시 실행하면 `client.ts`의 UUID를 repo seed user(`7507fdac-da23-5956-a5a4-9239de655be0`)로 맞춥니다.
 
 ```powershell
 .\scripts\windows_dev_bootstrap.ps1 -SkipNpmInstall
