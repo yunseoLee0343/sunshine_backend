@@ -1,0 +1,386 @@
+/* Onboarding shell */
+.container {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* Progress indicator */
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 2rem;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  position: relative;
+}
+
+.step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 14px;
+  left: calc(50% + 14px);
+  right: calc(-50% + 14px);
+  height: 2px;
+  background: #dee2e6;
+}
+
+.step:not(:last-child).done::after,
+.step:not(:last-child).active::after {
+  background: #2d6a4f;
+}
+
+.dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #dee2e6;
+  color: #868e96;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  transition: background 0.2s, color 0.2s;
+}
+
+.step.active .dot {
+  background: #2d6a4f;
+  color: #fff;
+}
+
+.step.done .dot {
+  background: #52b788;
+  color: #fff;
+}
+
+.stepLabel {
+  font-size: 0.68rem;
+  color: #adb5bd;
+  white-space: nowrap;
+}
+
+.step.active .stepLabel {
+  color: #2d6a4f;
+  font-weight: 600;
+}
+
+.step.done .stepLabel {
+  color: #52b788;
+}
+
+/* Section title */
+.title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #1b4332;
+  margin-bottom: 0.4rem;
+}
+
+.subtitle {
+  font-size: 0.875rem;
+  color: #6c757d;
+  margin-bottom: 1.5rem;
+}
+
+/* ── Step 1: Image picker ── */
+.imageGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.imageCard {
+  border: 2px solid #dee2e6;
+  border-radius: 12px;
+  padding: 1.25rem 1rem;
+  cursor: pointer;
+  text-align: center;
+  background: #fff;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  user-select: none;
+}
+
+.imageCard:hover {
+  border-color: #74c69d;
+  background: #f8fff9;
+}
+
+.imageCard.selected {
+  border-color: #2d6a4f;
+  background: #d8f3dc;
+}
+
+.imageEmoji {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.imageName {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #343a40;
+}
+
+.imageHint {
+  font-size: 0.72rem;
+  color: #868e96;
+}
+
+/* ── Step 2: Candidates ── */
+.candidateList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.candidateCard {
+  border: 2px solid #dee2e6;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.candidateCard:hover {
+  border-color: #74c69d;
+  background: #f8fff9;
+}
+
+.candidateCard.selected {
+  border-color: #2d6a4f;
+  background: #d8f3dc;
+}
+
+.candidateInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.candidateName {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #212529;
+}
+
+.candidateScientific {
+  font-size: 0.8rem;
+  color: #868e96;
+  font-style: italic;
+}
+
+.confidenceBadge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.confidenceHigh {
+  background: #d8f3dc;
+  color: #1b4332;
+}
+
+.confidenceMedium {
+  background: #fff3cd;
+  color: #664d03;
+}
+
+.confidenceLow {
+  background: #f8d7da;
+  color: #58151c;
+}
+
+/* ── Step 3: Profile form ── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #343a40;
+}
+
+.input {
+  padding: 0.65rem 0.9rem;
+  border: 1.5px solid #ced4da;
+  border-radius: 8px;
+  font-size: 1rem;
+  color: #212529;
+  background: #fff;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #2d6a4f;
+}
+
+.input.error {
+  border-color: #dc3545;
+}
+
+.fieldError {
+  font-size: 0.78rem;
+  color: #dc3545;
+}
+
+.roomGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.roomChip {
+  padding: 0.5rem 0.25rem;
+  border: 1.5px solid #ced4da;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 0.875rem;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.roomChip:hover {
+  border-color: #74c69d;
+  background: #f8fff9;
+}
+
+.roomChip.selectedRoom {
+  border-color: #2d6a4f;
+  background: #d8f3dc;
+  font-weight: 600;
+  color: #1b4332;
+}
+
+/* ── Step 4: Success ── */
+.successCard {
+  background: linear-gradient(135deg, #d8f3dc 0%, #b7e4c7 100%);
+  border-radius: 16px;
+  padding: 2rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.successEmoji {
+  font-size: 3.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.successName {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1b4332;
+  margin-bottom: 0.25rem;
+}
+
+.successMeta {
+  font-size: 0.875rem;
+  color: #2d6a4f;
+  margin-bottom: 0.5rem;
+}
+
+.successMessage {
+  font-size: 0.9rem;
+  color: #40916c;
+  font-style: italic;
+  background: rgba(255,255,255,0.6);
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  margin-top: 1rem;
+}
+
+/* ── Navigation bar ── */
+.navBar {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.navBar.hasBack {
+  justify-content: space-between;
+}
+
+.btnBack {
+  padding: 0.6rem 1.25rem;
+  border: 1.5px solid #ced4da;
+  border-radius: 8px;
+  background: #fff;
+  color: #495057;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.btnBack:hover {
+  border-color: #adb5bd;
+}
+
+.btnNext {
+  padding: 0.6rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  background: #2d6a4f;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  min-width: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.btnNext:hover:not(:disabled) {
+  background: #1b4332;
+}
+
+.btnNext:disabled {
+  background: #adb5bd;
+  cursor: not-allowed;
+}
+
+/* Error banner */
+.errorBanner {
+  padding: 0.75rem 1rem;
+  background: #f8d7da;
+  border: 1px solid #f5c2c7;
+  border-radius: 8px;
+  color: #58151c;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
