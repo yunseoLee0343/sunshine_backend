@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "data/uploads"
     UPLOAD_MAX_BYTES: int = 10 * 1024 * 1024  # 10 MB
 
+    PLANT_ID_API_KEY: str = ""
+    PLANT_ID_API_URL: str = "https://plant.id/api/v3"
+    PLANT_ID_TIMEOUT_SECONDS: float = 10.0
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     @model_validator(mode="after")
