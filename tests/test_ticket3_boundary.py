@@ -47,7 +47,13 @@ def test_vision_dir_exists_for_ticket3() -> None:
 
 
 def test_vision_dir_only_contains_allowed_modules() -> None:
-    allowed = {"__init__.py", "species_classifier.py", "mock_species_classifier.py"}
+    # plant_id_species_classifier.py added by T-003C
+    allowed = {
+        "__init__.py",
+        "species_classifier.py",
+        "mock_species_classifier.py",
+        "plant_id_species_classifier.py",
+    }
     actual = {p.name for p in (APP_DIR / "vision").iterdir() if p.is_file() and p.suffix == ".py"}
     extra = actual - allowed
     assert not extra, f"Unexpected files under app/vision: {extra}"
