@@ -1,4 +1,4 @@
-"""SpeciesCandidateService — TICKET-003.
+"""SpeciesCandidateService — TICKET-003 + T-003E.
 
 Calls a SpeciesClassifierPort (mock or, in the future, a real classifier)
 and optionally resolves each candidate to a row in ``species_profiles``.
@@ -15,6 +15,19 @@ Strict boundaries — this service must NOT:
 from app.repositories.species_repository import SpeciesRepository
 from app.schemas.plants import SpeciesCandidateItem, SpeciesCandidatesResponse
 from app.vision.species_classifier import SpeciesCandidate, SpeciesClassifierPort
+
+
+def normalize_species_name(value: str | None) -> str:
+    """Lowercase and collapse all internal whitespace.
+
+    Examples:
+        "Monstera deliciosa"       -> "monstera deliciosa"
+        "  monstera   deliciosa "  -> "monstera deliciosa"
+        "EPIPREMNUM AUREUM"        -> "epipremnum aureum"
+    """
+    if not value:
+        return ""
+    return " ".join(value.strip().lower().split())
 
 
 class SpeciesCandidateService:
@@ -57,9 +70,15 @@ class SpeciesCandidateService:
     async def _resolve_species_profile_id(self, candidate: SpeciesCandidate):
         """Best-effort match to species_profiles. Returns None on no match.
 
-        Lookup order: scientific_name → korean_name → common_name (label_en).
-        A missing match is not an error.
+        Lookup order (T-003E):
+          1. exact scientific_name
+          2. exact korean_name
+          3. exact common_name / label_en
+          4+5. case-insensitive + whitespace-normalised scientific_name
+          6. case-insensitive common_name
+          7. alias from metadata_json['aliases']
         """
+        # Steps 1–3: exact matches
         if candidate.scientific_name:
             profile = await self.species_repo.find_by_scientific_name(candidate.scientific_name)
             if profile is not None:
@@ -72,6 +91,28 @@ class SpeciesCandidateService:
 
         if candidate.label_en:
             profile = await self.species_repo.find_by_common_name(candidate.label_en)
+            if profile is not None:
+                return profile.id
+
+        # Steps 4+5: normalised scientific_name (case-insensitive + whitespace-collapsed)
+        norm_sci = normalize_species_name(candidate.scientific_name)
+        if norm_sci:
+            profile = await self.species_repo.find_by_scientific_name_normalized(norm_sci)
+            if profile is not None:
+                return profile.id
+
+        # Step 6: normalised common_name (case-insensitive)
+        norm_common = normalize_species_name(candidate.label_en)
+        if norm_common:
+            profile = await self.species_repo.find_by_common_name_normalized(norm_common)
+            if profile is not None:
+                return profile.id
+
+        # Step 7: alias lookup — try each unique non-empty normalised term in order
+        for term in dict.fromkeys(
+            filter(None, [norm_sci, normalize_species_name(candidate.label_ko), norm_common])
+        ):
+            profile = await self.species_repo.find_by_alias(term)
             if profile is not None:
                 return profile.id
 

@@ -8,6 +8,7 @@ import asyncio
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.api.plants import get_session, get_species_classifier
@@ -34,6 +35,18 @@ def _setup_overrides() -> None:
 
 def _clear_overrides() -> None:
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def _patch_new_repo_methods():
+    """Patch the T-003E repo methods so existing tests don't break."""
+    base = "app.services.species_candidate_service.SpeciesRepository"
+    with (
+        patch(f"{base}.find_by_scientific_name_normalized", new=AsyncMock(return_value=None)),
+        patch(f"{base}.find_by_common_name_normalized", new=AsyncMock(return_value=None)),
+        patch(f"{base}.find_by_alias", new=AsyncMock(return_value=None)),
+    ):
+        yield
 
 
 # ---------------------------------------------------------------------------
