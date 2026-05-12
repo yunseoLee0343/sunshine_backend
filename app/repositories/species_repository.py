@@ -5,7 +5,7 @@ No image classification, no model inference, no diagnosis fields.
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.species_profile import SpeciesProfile
@@ -36,4 +36,35 @@ class SpeciesRepository:
 
     async def find_by_common_name(self, common_name: str) -> SpeciesProfile | None:
         result = await self.session.execute(select(SpeciesProfile).where(SpeciesProfile.common_name == common_name))
+        return result.scalars().first()
+
+    async def find_by_scientific_name_normalized(self, normalized: str) -> SpeciesProfile | None:
+        result = await self.session.execute(
+            select(SpeciesProfile).where(
+                func.lower(
+                    func.regexp_replace(SpeciesProfile.scientific_name, r"\s+", " ", "g")
+                ) == normalized
+            )
+        )
+        return result.scalars().first()
+
+    async def find_by_common_name_normalized(self, normalized: str) -> SpeciesProfile | None:
+        result = await self.session.execute(
+            select(SpeciesProfile).where(
+                func.lower(SpeciesProfile.common_name) == normalized
+            )
+        )
+        return result.scalars().first()
+
+    async def find_by_alias(self, normalized_alias: str) -> SpeciesProfile | None:
+        alias_elem = func.jsonb_array_elements_text(
+            SpeciesProfile.metadata_json["aliases"]
+        ).column_valued("alias_elem", joins_implicitly=True)
+        result = await self.session.execute(
+            select(SpeciesProfile).where(
+                func.lower(
+                    func.regexp_replace(alias_elem, r"\s+", " ", "g")
+                ) == normalized_alias
+            )
+        )
         return result.scalars().first()
