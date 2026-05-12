@@ -183,6 +183,8 @@ async def _ensure_plant(session: AsyncSession, result: SeedResult) -> None:
         species_profile_id=DEMO_MONSTERA_SPECIES_ID,
         nickname="초록이",
         room_name="거실",
+        external_plant_id="plant-001",
+        device_id="rpi-edge-node-01",
         created_at=now,
         updated_at=now,
     )

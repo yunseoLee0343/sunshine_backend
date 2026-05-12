@@ -40,3 +40,10 @@ class PlantRepository:
         """Fetch plant by PK (ownership check done at service layer)."""
         result = await self.session.execute(select(Plant).where(Plant.id == plant_id))
         return result.scalar_one_or_none()
+
+    async def find_by_external_plant_id(self, external_plant_id: str) -> Plant | None:
+        """Resolve an edge-node external plant identifier to its internal record."""
+        result = await self.session.execute(
+            select(Plant).where(Plant.external_plant_id == external_plant_id)
+        )
+        return result.scalar_one_or_none()

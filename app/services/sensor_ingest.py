@@ -1,19 +1,26 @@
-"""SensorIngestService — TICKET-005.
+"""SensorIngestService — TICKET-005 / S-001.
 
 Ingest a single sensor reading. Idempotent by reading_id:
   - New reading_id   → INSERT, return 201 "inserted"
   - Duplicate        → no-op,  return 200 "duplicate_ignored"
   - Unknown plant_id → raise 404
 
+plant_id resolution (S-001):
+  1. If payload plant_id is a valid UUID → lookup by PK.
+  2. Else → lookup by Plant.external_plant_id.
+  3. If plant.device_id is set, it must match payload device_id.
+
 Forbidden: snapshots, character updates, Rule Engine, MQTT, workers.
 """
 
+import uuid as _uuid_mod
 from datetime import UTC, datetime
 
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.plant import Plant
+from app.repositories.plant_repository import PlantRepository
 from app.repositories.sensor_repository import SensorRepository
 from app.schemas.sensor_readings import SensorReadingRequest, SensorReadingResponse
 
@@ -23,10 +30,24 @@ class SensorIngestService:
         self.session = session
         self.repo = SensorRepository(session)
 
+    async def _resolve_plant(self, plant_id_str: str, device_id: str) -> Plant | None:
+        try:
+            pid = _uuid_mod.UUID(plant_id_str)
+            plant = await self.session.get(Plant, pid)
+        except ValueError:
+            plant_repo = PlantRepository(self.session)
+            plant = await plant_repo.find_by_external_plant_id(plant_id_str)
+
+        if plant is None:
+            return None
+        if plant.device_id is not None and plant.device_id != device_id:
+            return None
+        return plant
+
     async def ingest(self, req: SensorReadingRequest) -> tuple[SensorReadingResponse, int]:
         """Return (response, http_status_code)."""
-        # 1. Validate plant exists.
-        plant = await self.session.get(Plant, req.plant_id)
+        # 1. Resolve plant (UUID or external_plant_id).
+        plant = await self._resolve_plant(req.plant_id, req.device_id)
         if plant is None:
             raise HTTPException(status_code=404, detail="plant not found")
 
@@ -42,11 +63,11 @@ class SensorIngestService:
                 200,
             )
 
-        # 3. Insert new row.
+        # 3. Insert new row — always store the internal UUID, not the external string.
         await self.repo.insert(
             reading_id=req.reading_id,
             device_id=req.device_id,
-            plant_id=req.plant_id,
+            plant_id=plant.id,
             measured_at=req.measured_at,
             temperature_c=req.temperature_c,
             humidity_pct=req.humidity_pct,

@@ -1,8 +1,7 @@
-"""Sensor Reading schemas — TICKET-005."""
+"""Sensor Reading schemas — TICKET-005 / S-001."""
 
 import math
 import re
-import uuid
 from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -10,21 +9,22 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 _READING_ID_RE = re.compile(r"^[A-Za-z0-9\-_:.]+$")
 
 
-def _reject_non_finite(v: float, name: str) -> float:
+def _reject_non_finite(v: float | None, name: str) -> None:
+    if v is None:
+        return
     if math.isnan(v) or math.isinf(v):
         raise ValueError(f"{name} must be a finite number")
-    return v
 
 
 class SensorReadingRequest(BaseModel):
     reading_id: str = Field(..., min_length=1, max_length=128)
     device_id: str = Field(..., min_length=1, max_length=128)
-    plant_id: uuid.UUID
+    plant_id: str  # external or UUID plant identifier from device payload
     measured_at: datetime
-    temperature_c: float = Field(..., ge=-40.0, le=80.0)
-    humidity_pct: float = Field(..., ge=0.0, le=100.0)
-    light_lux: float = Field(..., ge=0.0, le=200_000.0)
-    soil_moisture_pct: float = Field(..., ge=0.0, le=100.0)
+    temperature_c: float | None = Field(default=None, ge=-40.0, le=80.0)
+    humidity_pct: float | None = Field(default=None, ge=0.0, le=100.0)
+    light_lux: float | None = Field(default=None, ge=0.0, le=200_000.0)
+    soil_moisture_pct: float | None = Field(default=None, ge=0.0, le=100.0)
 
     @field_validator("reading_id")
     @classmethod
