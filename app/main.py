@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from app.api.care_logs import router as care_logs_router
+from app.api.uploads import router as uploads_router
 from app.api.chat import router as chat_router
 from app.api.chat_evaluation import router as chat_evaluation_router
 from app.api.chat_runs import router as chat_runs_router
@@ -101,6 +102,11 @@ _TAGS_METADATA = [
         "ground-truth-similarity metrics, and ground truth CRUD.",
     },
     {
+        "name": "uploads",
+        "description": "Plant image upload. Accepts JPEG / PNG / WebP (≤ 10 MB) and returns "
+        "an opaque `image_ref` for use with `/plants/species-candidates`.",
+    },
+    {
         "name": "internal",
         "description": "Internal / dev-only endpoints. Not part of the public API contract. "
         "Used for manual triggering and integration testing.",
@@ -134,6 +140,7 @@ app.include_router(plants_router)
 app.include_router(retrieval_router)
 app.include_router(sensor_readings_router)
 app.include_router(rule_character_sync_router)
+app.include_router(uploads_router)
 
 
 @app.get("/healthz", tags=["internal"], summary="Liveness probe")
