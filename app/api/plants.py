@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import CurrentUser, get_current_user, resolve_user_id
+from app.core.config import settings
 from app.db.session import AsyncSessionLocal
 from app.models.plant_character import PlantCharacter
 from app.repositories.character_repository import CharacterRepository
@@ -35,6 +36,7 @@ from app.services.evidence_builder import PlantNotFoundError
 from app.services.plant_onboarding import PlantOnboardingService
 from app.services.species_candidate_service import SpeciesCandidateService
 from app.vision.mock_species_classifier import MockSpeciesClassifier
+from app.vision.plant_id_species_classifier import PlantIdSpeciesClassifier
 from app.vision.species_classifier import SpeciesClassifierPort
 
 router = APIRouter(prefix="/plants", tags=["plants"])
@@ -43,8 +45,11 @@ router = APIRouter(prefix="/plants", tags=["plants"])
 _character_engine = CharacterStateEngine()
 
 # Lightweight, stateless mock — instantiated once at import time.
-# Real model loading is forbidden in this ticket.
 _mock_classifier = MockSpeciesClassifier()
+
+# Plant.id classifier is lazily instantiated on first use so that secrets
+# and HTTP clients are never touched at import time.
+_plant_id_classifier: PlantIdSpeciesClassifier | None = None
 
 _orchestrator = ChatOrchestrator()
 
@@ -56,11 +61,24 @@ async def get_session():
 
 
 def get_species_classifier() -> SpeciesClassifierPort:
-    """FastAPI dependency: yields the configured species classifier port.
+    """FastAPI dependency: returns the classifier selected by SPECIES_CLASSIFIER_PROVIDER.
 
+    Supported values: 'mock' (default), 'plant_id'.
     Override this in tests to inject a fake classifier.
     """
-    return _mock_classifier
+    global _plant_id_classifier
+
+    provider = settings.SPECIES_CLASSIFIER_PROVIDER
+
+    if provider == "mock":
+        return _mock_classifier
+
+    if provider == "plant_id":
+        if _plant_id_classifier is None:
+            _plant_id_classifier = PlantIdSpeciesClassifier()
+        return _plant_id_classifier
+
+    raise RuntimeError(f"unsupported species classifier provider: {provider!r}")
 
 
 # ---------------------------------------------------------------------------

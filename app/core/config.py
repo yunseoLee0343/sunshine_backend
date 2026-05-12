@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     PLANT_ID_API_URL: str = "https://plant.id/api/v3"
     PLANT_ID_TIMEOUT_SECONDS: float = 10.0
 
+    SPECIES_CLASSIFIER_PROVIDER: str = "mock"
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     @model_validator(mode="after")
