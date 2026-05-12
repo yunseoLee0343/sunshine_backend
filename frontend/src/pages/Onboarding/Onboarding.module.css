@@ -90,53 +90,72 @@
   margin-bottom: 1.5rem;
 }
 
-/* ── Step 1: Image picker ── */
-.imageGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-}
-
-.imageCard {
-  border: 2px solid #dee2e6;
+/* ── Step 1: Image upload ── */
+.uploadArea {
+  border: 2px dashed #ced4da;
   border-radius: 12px;
-  padding: 1.25rem 1rem;
   cursor: pointer;
-  text-align: center;
-  background: #fff;
-  transition: border-color 0.15s, background 0.15s, transform 0.1s;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  user-select: none;
+  justify-content: center;
+  min-height: 220px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  background: #f8f9fa;
+  transition: border-color 0.15s, background 0.15s;
 }
 
-.imageCard:hover {
+.uploadArea:hover {
   border-color: #74c69d;
   background: #f8fff9;
 }
 
-.imageCard.selected {
-  border-color: #2d6a4f;
-  background: #d8f3dc;
+.uploadEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  text-align: center;
 }
 
-.imageEmoji {
-  font-size: 2.5rem;
+.uploadIcon {
+  font-size: 3rem;
   line-height: 1;
 }
 
-.imageName {
+.uploadEmptyText {
   font-size: 0.9rem;
-  font-weight: 600;
-  color: #343a40;
+  color: #6c757d;
 }
 
-.imageHint {
-  font-size: 0.72rem;
-  color: #868e96;
+.previewImage {
+  width: 100%;
+  max-height: 280px;
+  object-fit: cover;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.changeImageBtn {
+  display: block;
+  width: 100%;
+  padding: 0.5rem;
+  border: 1.5px solid #ced4da;
+  border-radius: 8px;
+  background: #fff;
+  color: #495057;
+  font-size: 0.875rem;
+  cursor: pointer;
+  text-align: center;
+  margin-bottom: 1rem;
+  transition: border-color 0.15s;
+}
+
+.changeImageBtn:hover {
+  border-color: #74c69d;
 }
 
 /* ── Step 2: Candidates ── */

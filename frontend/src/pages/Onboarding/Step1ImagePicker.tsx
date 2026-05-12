@@ -1,65 +1,64 @@
+import { useMemo, useRef } from 'react'
 import styles from './Onboarding.module.css'
 
-interface MockImage {
-  imageRef: string
-  emoji: string
-  labelKo: string
-  hint: string
-}
-
-const MOCK_IMAGES: MockImage[] = [
-  {
-    imageRef: 'uploads/mock/monstera.jpg',
-    emoji: '🌿',
-    labelKo: '몬스테라',
-    hint: '넓은 잎이 특징',
-  },
-  {
-    imageRef: 'uploads/mock/pothos.jpg',
-    emoji: '🍃',
-    labelKo: '스킨답서스',
-    hint: '하트 모양 잎',
-  },
-  {
-    imageRef: 'uploads/mock/philodendron.jpg',
-    emoji: '🌱',
-    labelKo: '필로덴드론',
-    hint: '덩굴성 관엽식물',
-  },
-  {
-    imageRef: 'uploads/mock/unknown.jpg',
-    emoji: '🪴',
-    labelKo: '잘 모르겠어요',
-    hint: '직접 분류해 줄게요',
-  },
-]
-
 interface Props {
-  selected: string | null
-  onSelect: (imageRef: string) => void
+  selectedFile: File | null
+  onSelect: (file: File) => void
 }
 
-export default function Step1ImagePicker({ selected, onSelect }: Props) {
+export default function Step1ImagePicker({ selectedFile, onSelect }: Props) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const previewUrl = useMemo(
+    () => (selectedFile ? URL.createObjectURL(selectedFile) : null),
+    [selectedFile],
+  )
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) onSelect(file)
+  }
+
   return (
     <>
-      <h2 className={styles.title}>어떤 식물인가요?</h2>
-      <p className={styles.subtitle}>식물 사진과 가장 비슷한 이미지를 선택해 주세요.</p>
+      <h2 className={styles.title}>식물 사진을 선택해 주세요</h2>
+      <p className={styles.subtitle}>갤러리에서 선택하거나 카메라로 촬영해 주세요.</p>
 
-      <div className={styles.imageGrid}>
-        {MOCK_IMAGES.map((img) => (
-          <button
-            key={img.imageRef}
-            type="button"
-            className={`${styles.imageCard} ${selected === img.imageRef ? styles.selected : ''}`}
-            onClick={() => onSelect(img.imageRef)}
-            aria-pressed={selected === img.imageRef}
-          >
-            <span className={styles.imageEmoji} aria-hidden="true">{img.emoji}</span>
-            <span className={styles.imageName}>{img.labelKo}</span>
-            <span className={styles.imageHint}>{img.hint}</span>
-          </button>
-        ))}
+      <div
+        className={styles.uploadArea}
+        onClick={() => inputRef.current?.click()}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') inputRef.current?.click() }}
+        aria-label="식물 사진 업로드"
+      >
+        {previewUrl ? (
+          <img src={previewUrl} alt="식물 미리보기" className={styles.previewImage} />
+        ) : (
+          <div className={styles.uploadEmpty}>
+            <span className={styles.uploadIcon} aria-hidden="true">📷</span>
+            <span className={styles.uploadEmptyText}>식물 사진을 업로드해 주세요</span>
+          </div>
+        )}
       </div>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className={styles.hiddenInput}
+        onChange={handleChange}
+      />
+
+      {selectedFile && (
+        <button
+          type="button"
+          className={styles.changeImageBtn}
+          onClick={() => inputRef.current?.click()}
+        >
+          다른 사진 선택
+        </button>
+      )}
     </>
   )
 }
