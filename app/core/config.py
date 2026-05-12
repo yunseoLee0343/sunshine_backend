@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     DATABASE_PASSWORD: str = "change-me-local-only"
     DATABASE_URL: str = ""
 
+    UPLOAD_DIR: str = "data/uploads"
+    UPLOAD_MAX_BYTES: int = 10 * 1024 * 1024  # 10 MB
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     @model_validator(mode="after")
