@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createPlant, fetchSpeciesCandidates } from '../../api/onboarding'
 import type { PlantCard, SpeciesCandidateItem } from '../../api/types'
+import { uploadPlantImage } from '../../api/uploads'
 import Loading from '../../components/Loading'
 import styles from './Onboarding.module.css'
 import Step1ImagePicker from './Step1ImagePicker'
@@ -46,7 +47,7 @@ export default function Onboarding() {
   const [error, setError] = useState<string | null>(null)
 
   // Step 1
-  const [selectedImageRef, setSelectedImageRef] = useState<string | null>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
   // Step 2
   const [candidates, setCandidates] = useState<SpeciesCandidateItem[]>([])
@@ -68,19 +69,20 @@ export default function Onboarding() {
     setStep((s) => (s > 1 ? ((s - 1) as Step) : s))
   }
 
-  // Step 1 → 2: call species-candidates API
+  // Step 1 → 2: upload image, then call species-candidates API
   async function advanceFromStep1() {
-    if (!selectedImageRef) return
+    if (!selectedFile) return
     setError(null)
     setLoading(true)
     try {
-      const res = await fetchSpeciesCandidates(selectedImageRef)
+      const { image_ref } = await uploadPlantImage(selectedFile)
+      const res = await fetchSpeciesCandidates(image_ref)
       setCandidates(res.candidates)
       // Auto-select the first registerable candidate; skip null-profile fallbacks
       setSelectedCandidate(res.candidates.find((c) => c.species_profile_id != null) ?? null)
       setStep(2)
     } catch {
-      setError('종 후보 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
+      setError('사진 업로드 또는 종 분석에 실패했어요. 잠시 후 다시 시도해 주세요.')
     } finally {
       setLoading(false)
     }
@@ -139,7 +141,7 @@ export default function Onboarding() {
   // ------------------------------------------------------------------
 
   const nextDisabled =
-    (step === 1 && !selectedImageRef) ||
+    (step === 1 && !selectedFile) ||
     (step === 2 && (!selectedCandidate || !selectedCandidate.species_profile_id)) ||
     loading
 
@@ -171,8 +173,8 @@ export default function Onboarding() {
         <>
           {step === 1 && (
             <Step1ImagePicker
-              selected={selectedImageRef}
-              onSelect={setSelectedImageRef}
+              selectedFile={selectedFile}
+              onSelect={setSelectedFile}
             />
           )}
           {step === 2 && (
