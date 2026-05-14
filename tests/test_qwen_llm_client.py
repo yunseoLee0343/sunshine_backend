@@ -261,3 +261,128 @@ def test_qwen_client_does_not_import_embedding_config() -> None:
     assert "EMBEDDING_MODEL_NAME" not in src
     assert "EMBEDDING_VECTOR_DIM" not in src
     assert "LocalEmbeddingService" not in src
+
+
+# ---------------------------------------------------------------------------
+# Registry-based endpoint resolution (TICKET-055)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_client_calls_resolved_endpoint_not_constructor_url() -> None:
+    """QwenLLMClient must use the registry URL, ignoring any static base_url."""
+    from unittest.mock import AsyncMock as _AM
+
+    from app.llm.endpoint_registry import LLMEndpoint
+
+    mock_endpoint = LLMEndpoint(
+        provider="qwen",
+        model="qwen3.6",
+        base_url="https://runpod-live.net",
+        api_key=None,
+        timeout_seconds=30.0,
+        source="file",
+    )
+    mock_registry = _AM()
+    mock_registry.resolve_qwen_endpoint.return_value = mock_endpoint
+
+    http = AsyncMock(spec=httpx.AsyncClient)
+    http.post = AsyncMock(return_value=_make_http_response())
+    client = QwenLLMClient(
+        base_url="http://stale-url:9999",  # must NOT be used
+        model="qwen3.6",
+        timeout=10.0,
+        endpoint_registry=mock_registry,
+        http_client=http,
+    )
+
+    await client.complete(_make_request())
+
+    args, _ = http.post.call_args
+    assert "runpod-live.net" in args[0]
+    assert "stale-url" not in args[0]
+
+
+@pytest.mark.asyncio
+async def test_registry_resolved_per_request_enables_hot_swap() -> None:
+    """A second call picks up the updated registry URL without restart."""
+    from app.llm.endpoint_registry import LLMEndpoint
+
+    endpoint_v1 = LLMEndpoint(
+        provider="qwen", model="qwen3.6",
+        base_url="https://runpod-v1.net", api_key=None,
+        timeout_seconds=30.0, source="file",
+    )
+    endpoint_v2 = LLMEndpoint(
+        provider="qwen", model="qwen3.6",
+        base_url="https://runpod-v2.net", api_key=None,
+        timeout_seconds=30.0, source="file",
+    )
+
+    call_count = 0
+
+    async def _resolve():
+        nonlocal call_count
+        call_count += 1
+        return endpoint_v1 if call_count == 1 else endpoint_v2
+
+    mock_registry = MagicMock()
+    mock_registry.resolve_qwen_endpoint = _resolve
+
+    http = AsyncMock(spec=httpx.AsyncClient)
+    http.post = AsyncMock(return_value=_make_http_response())
+    client = QwenLLMClient(endpoint_registry=mock_registry, http_client=http)
+
+    await client.complete(_make_request())
+    await client.complete(_make_request())
+
+    urls = [call[0][0] for call in http.post.call_args_list]
+    assert "runpod-v1.net" in urls[0]
+    assert "runpod-v2.net" in urls[1]
+
+
+@pytest.mark.asyncio
+async def test_authorization_header_sent_when_api_key_set() -> None:
+    from app.llm.endpoint_registry import LLMEndpoint
+
+    mock_endpoint = LLMEndpoint(
+        provider="qwen", model="qwen3.6",
+        base_url="https://runpod.net", api_key="my-secret-key",
+        timeout_seconds=30.0, source="env",
+    )
+    mock_registry = MagicMock()
+    mock_registry.resolve_qwen_endpoint = AsyncMock(return_value=mock_endpoint)
+
+    http = AsyncMock(spec=httpx.AsyncClient)
+    http.post = AsyncMock(return_value=_make_http_response())
+    client = QwenLLMClient(endpoint_registry=mock_registry, http_client=http)
+
+    await client.complete(_make_request())
+
+    _, kwargs = http.post.call_args
+    headers = kwargs.get("headers") or {}
+    assert "Authorization" in headers
+    assert headers["Authorization"] == "Bearer my-secret-key"
+
+
+@pytest.mark.asyncio
+async def test_no_auth_header_when_api_key_absent() -> None:
+    from app.llm.endpoint_registry import LLMEndpoint
+
+    mock_endpoint = LLMEndpoint(
+        provider="qwen", model="qwen3.6",
+        base_url="https://runpod.net", api_key=None,
+        timeout_seconds=30.0, source="env",
+    )
+    mock_registry = MagicMock()
+    mock_registry.resolve_qwen_endpoint = AsyncMock(return_value=mock_endpoint)
+
+    http = AsyncMock(spec=httpx.AsyncClient)
+    http.post = AsyncMock(return_value=_make_http_response())
+    client = QwenLLMClient(endpoint_registry=mock_registry, http_client=http)
+
+    await client.complete(_make_request())
+
+    _, kwargs = http.post.call_args
+    headers = kwargs.get("headers") or {}
+    assert "Authorization" not in headers
