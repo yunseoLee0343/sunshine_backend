@@ -26,6 +26,8 @@ async def test_mqtt_insert_then_detail_returns_latest() -> None:
 
     # ---- MQTT ingest ----
     mock_session = MagicMock()
+    mock_session.commit = AsyncMock()
+    mock_session.rollback = AsyncMock()
     ingest_svc = MqttSensorIngestService(mock_session)
 
     mock_ingest_resp = SensorReadingResponse(status="inserted", ignored=False, reading_id="r-e2e-001")
@@ -58,6 +60,7 @@ async def test_mqtt_insert_then_detail_returns_latest() -> None:
     assert result.outcome == IngestOutcome.inserted
     assert result.snapshot_refreshed is True
     mock_snap_instance.aggregate.assert_called_once_with(plant_id)
+    mock_session.commit.assert_awaited_once()
 
     # ---- Environment detail ----
     plant = MagicMock()

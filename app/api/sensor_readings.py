@@ -1,4 +1,4 @@
-"""Sensor Readings API router — TICKET-005."""
+"""Sensor Readings API router — TICKET-005 / TICKET-054."""
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
@@ -33,5 +33,10 @@ async def create_sensor_reading(
     separately — this endpoint only persists the raw row.
     """
     svc = SensorIngestService(session)
-    response, status_code = await svc.ingest(req)
+    try:
+        response, status_code = await svc.ingest(req)
+        await session.commit()
+    except Exception:
+        await session.rollback()
+        raise
     return JSONResponse(content=response.model_dump(), status_code=status_code)

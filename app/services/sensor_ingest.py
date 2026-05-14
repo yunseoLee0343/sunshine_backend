@@ -84,8 +84,9 @@ class SensorIngestService:
             soil_moisture_pct=req.soil_moisture_pct,
             created_at=datetime.now(UTC),
         )
-        await self.session.commit()
-
+        # Do NOT commit — the caller owns the transaction boundary.
+        # SQLAlchemy autoflush makes this INSERT visible to subsequent
+        # SELECTs within the same session before any commit.
         self.resolved_plant_id = plant.id
         return (
             SensorReadingResponse(

@@ -32,11 +32,12 @@ async def test_ingest_sets_resolved_plant_id_on_insert() -> None:
         soil_moisture_pct=38.0,
     )
 
+    mock_session.flush = AsyncMock()
+
     with (
         patch.object(svc, "_resolve_plant", AsyncMock(return_value=mock_plant)),
         patch.object(svc.repo, "find_by_reading_id", AsyncMock(return_value=None)),
         patch.object(svc.repo, "insert", AsyncMock()),
-        patch.object(mock_session, "commit", AsyncMock()),
     ):
         response, status_code = await svc.ingest(req)
 

@@ -1,8 +1,9 @@
-"""TICKET-053 — MqttSensorIngestService unit tests."""
+"""TICKET-053 / TICKET-054 — MqttSensorIngestService unit tests."""
 
 from __future__ import annotations
 
 import json
+import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -25,11 +26,18 @@ def _make_payload(**overrides) -> bytes:
     return json.dumps(data).encode()
 
 
+def _make_session() -> MagicMock:
+    session = MagicMock()
+    session.commit = AsyncMock()
+    session.rollback = AsyncMock()
+    return session
+
+
 @pytest.mark.asyncio
 async def test_invalid_topic_returns_invalid_topic_outcome() -> None:
     from app.services.mqtt_sensor_ingest import MqttSensorIngestService
 
-    svc = MqttSensorIngestService(MagicMock())
+    svc = MqttSensorIngestService(_make_session())
     result = await svc.process("bad/topic/extra/segment", _make_payload())
     assert result.outcome == IngestOutcome.invalid_topic
     assert result.snapshot_refreshed is False
@@ -39,7 +47,7 @@ async def test_invalid_topic_returns_invalid_topic_outcome() -> None:
 async def test_device_id_mismatch_returns_mismatch_outcome() -> None:
     from app.services.mqtt_sensor_ingest import MqttSensorIngestService
 
-    svc = MqttSensorIngestService(MagicMock())
+    svc = MqttSensorIngestService(_make_session())
     result = await svc.process(
         "sensor/readings/device-999",
         _make_payload(device_id="device-001"),
@@ -49,14 +57,12 @@ async def test_device_id_mismatch_returns_mismatch_outcome() -> None:
 
 
 @pytest.mark.asyncio
-async def test_inserted_outcome_calls_snapshot_aggregate() -> None:
-    import uuid
-
+async def test_inserted_outcome_commits_after_aggregate() -> None:
     from app.schemas.sensor_readings import SensorReadingResponse
     from app.services.mqtt_sensor_ingest import MqttSensorIngestService
 
     plant_id = uuid.uuid4()
-    mock_session = MagicMock()
+    mock_session = _make_session()
     svc = MqttSensorIngestService(mock_session)
 
     mock_ingest_resp = SensorReadingResponse(status="inserted", ignored=False, reading_id="r-001")
@@ -78,6 +84,8 @@ async def test_inserted_outcome_calls_snapshot_aggregate() -> None:
     assert result.outcome == IngestOutcome.inserted
     assert result.snapshot_refreshed is True
     assert result.plant_id == str(plant_id)
+    mock_session.commit.assert_awaited_once()
+    mock_snap_instance.aggregate.assert_awaited_once_with(plant_id)
 
 
 @pytest.mark.asyncio
@@ -85,7 +93,7 @@ async def test_duplicate_reading_does_not_call_snapshot_aggregate() -> None:
     from app.schemas.sensor_readings import SensorReadingResponse
     from app.services.mqtt_sensor_ingest import MqttSensorIngestService
 
-    mock_session = MagicMock()
+    mock_session = _make_session()
     svc = MqttSensorIngestService(mock_session)
 
     mock_dup_resp = SensorReadingResponse(status="duplicate_ignored", ignored=True, reading_id="r-001")
@@ -107,17 +115,18 @@ async def test_duplicate_reading_does_not_call_snapshot_aggregate() -> None:
     assert result.outcome == IngestOutcome.duplicate_ignored
     assert result.snapshot_refreshed is False
     mock_snap_instance.aggregate.assert_not_called()
+    # Duplicate: no commit needed (nothing was written)
+    mock_session.commit.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_snapshot_failure_does_not_lose_inserted_reading() -> None:
-    import uuid
-
+async def test_snapshot_failure_rolls_back_and_returns_error() -> None:
+    """TICKET-054: all-or-nothing — aggregate failure rolls back insert too."""
     from app.schemas.sensor_readings import SensorReadingResponse
     from app.services.mqtt_sensor_ingest import MqttSensorIngestService
 
     plant_id = uuid.uuid4()
-    mock_session = MagicMock()
+    mock_session = _make_session()
     svc = MqttSensorIngestService(mock_session)
 
     mock_ingest_resp = SensorReadingResponse(status="inserted", ignored=False, reading_id="r-001")
@@ -137,16 +146,17 @@ async def test_snapshot_failure_does_not_lose_inserted_reading() -> None:
 
         result = await svc.process("sensor/readings/device-001", _make_payload())
 
-    # Reading was inserted; snapshot failed but outcome is still inserted
-    assert result.outcome == IngestOutcome.inserted
+    assert result.outcome == IngestOutcome.error
     assert result.snapshot_refreshed is False
+    mock_session.rollback.assert_awaited_once()
+    mock_session.commit.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_invalid_payload_json_returns_invalid_payload() -> None:
     from app.services.mqtt_sensor_ingest import MqttSensorIngestService
 
-    svc = MqttSensorIngestService(MagicMock())
+    svc = MqttSensorIngestService(_make_session())
     result = await svc.process("sensor/readings/device-001", b"not json")
     assert result.outcome == IngestOutcome.invalid_payload
     assert result.snapshot_refreshed is False
@@ -154,13 +164,11 @@ async def test_invalid_payload_json_returns_invalid_payload() -> None:
 
 @pytest.mark.asyncio
 async def test_sunshine_topic_shape_accepted() -> None:
-    import uuid
-
     from app.schemas.sensor_readings import SensorReadingResponse
     from app.services.mqtt_sensor_ingest import MqttSensorIngestService
 
     plant_id = uuid.uuid4()
-    mock_session = MagicMock()
+    mock_session = _make_session()
     svc = MqttSensorIngestService(mock_session)
 
     mock_ingest_resp = SensorReadingResponse(status="inserted", ignored=False, reading_id="r-002")
@@ -183,3 +191,4 @@ async def test_sunshine_topic_shape_accepted() -> None:
         )
 
     assert result.outcome == IngestOutcome.inserted
+    assert result.snapshot_refreshed is True

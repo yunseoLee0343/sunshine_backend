@@ -119,14 +119,24 @@ class EnvironmentDetailService:
             await self._repo.get_snapshot_by_window(plant_id, "7d"),
         )
 
-        # Fallback: if no pre-computed latest snapshot, synthesise from raw reading
+        # Always fetch latest raw reading to detect stale snapshot.
+        raw = await self._repo.get_latest_sensor_reading(plant_id)
+
         latest_ws: WindowSnapshot | None = None
         if latest_row is not None:
-            latest_ws = _to_window_snapshot(latest_row)
-        else:
-            raw = await self._repo.get_latest_sensor_reading(plant_id)
-            if raw is not None:
+            snap_end = latest_row.window_end
+            if snap_end.tzinfo is None:
+                snap_end = snap_end.replace(tzinfo=UTC)
+            raw_ts = raw.measured_at if raw is not None else None
+            if raw_ts is not None and raw_ts.tzinfo is None:
+                raw_ts = raw_ts.replace(tzinfo=UTC)
+            # If the latest raw reading is newer than the snapshot, use it.
+            if raw is not None and raw_ts > snap_end:
                 latest_ws = _raw_to_window_snapshot(raw)
+            else:
+                latest_ws = _to_window_snapshot(latest_row)
+        elif raw is not None:
+            latest_ws = _raw_to_window_snapshot(raw)
 
         # Character explanation from hardcoded templates
         char_row = await self._repo.get_latest_character(plant_id)
