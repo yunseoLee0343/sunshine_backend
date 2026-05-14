@@ -1,4 +1,4 @@
-"""SensorIngestService — TICKET-005 / S-001.
+"""SensorIngestService — TICKET-005 / S-001 / TICKET-053.
 
 Ingest a single sensor reading. Idempotent by reading_id:
   - New reading_id   → INSERT, return 201 "inserted"
@@ -29,6 +29,8 @@ class SensorIngestService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self.repo = SensorRepository(session)
+        # Set by ingest() after a successful insert; None on duplicate or error.
+        self.resolved_plant_id: _uuid_mod.UUID | None = None
 
     async def _resolve_plant(self, plant_id_str: str, device_id: str) -> Plant | None:
         try:
@@ -45,7 +47,14 @@ class SensorIngestService:
         return plant
 
     async def ingest(self, req: SensorReadingRequest) -> tuple[SensorReadingResponse, int]:
-        """Return (response, http_status_code)."""
+        """Return (response, http_status_code).
+
+        After a successful INSERT, `self.resolved_plant_id` is set to the
+        internal UUID of the plant so the caller (e.g. MqttSensorIngestService)
+        can trigger snapshot aggregation without re-resolving the plant.
+        """
+        self.resolved_plant_id = None
+
         # 1. Resolve plant (UUID or external_plant_id).
         plant = await self._resolve_plant(req.plant_id, req.device_id)
         if plant is None:
@@ -77,6 +86,7 @@ class SensorIngestService:
         )
         await self.session.commit()
 
+        self.resolved_plant_id = plant.id
         return (
             SensorReadingResponse(
                 status="inserted",
