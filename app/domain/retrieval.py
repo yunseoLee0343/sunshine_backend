@@ -40,6 +40,7 @@ class RetrievedChunkResult:
     chunk_text: str
     similarity_score: float
     rank: int
+    rag_layer: str | None = None
 
 
 @dataclass
