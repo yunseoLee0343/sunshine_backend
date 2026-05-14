@@ -31,7 +31,13 @@ class Settings(BaseSettings):
     LLM_BACKEND: str = "mock"
     QWEN_LLM_MODEL: str = "qwen3.6"
     QWEN_LLM_BASE_URL: str = "http://localhost:8080"
-    QWEN_LLM_TIMEOUT_SECONDS: float = 30.0
+    QWEN_LLM_TIMEOUT_SECONDS: float = 120.0
+    QWEN_LLM_API_KEY: str = ""
+    QWEN_LLM_AUTH_HEADER: str = "Authorization"
+    QWEN_ENDPOINT_REGISTRY_MODE: str = "env"  # env | file | db
+    QWEN_ENDPOINT_REGISTRY_FILE: str = "/app/runtime/qwen_endpoint.json"
+
+    INTERNAL_TOKEN: str = ""
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 

@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from app.api.care_logs import router as care_logs_router
-from app.api.uploads import router as uploads_router
 from app.api.chat import router as chat_router
 from app.api.chat_evaluation import router as chat_evaluation_router
 from app.api.chat_runs import router as chat_runs_router
@@ -14,7 +13,9 @@ from app.api.home import router as home_router
 from app.api.plants import router as plants_router
 from app.api.retrieval import router as retrieval_router
 from app.api.rule_character_sync import router as rule_character_sync_router
+from app.api.runtime_endpoints import router as runtime_endpoints_router
 from app.api.sensor_readings import router as sensor_readings_router
+from app.api.uploads import router as uploads_router
 from app.db.health import check_db
 
 _DESCRIPTION = """
@@ -140,6 +141,7 @@ app.include_router(plants_router)
 app.include_router(retrieval_router)
 app.include_router(sensor_readings_router)
 app.include_router(rule_character_sync_router)
+app.include_router(runtime_endpoints_router)
 app.include_router(uploads_router)
 
 

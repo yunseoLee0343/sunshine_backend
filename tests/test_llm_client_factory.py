@@ -25,6 +25,8 @@ def test_factory_returns_qwen_when_backend_qwen() -> None:
         mock_settings.QWEN_LLM_BASE_URL = "http://localhost:8080"
         mock_settings.QWEN_LLM_MODEL = "qwen3.6"
         mock_settings.QWEN_LLM_TIMEOUT_SECONDS = 30.0
+        mock_settings.QWEN_ENDPOINT_REGISTRY_MODE = "env"
+        mock_settings.QWEN_LLM_AUTH_HEADER = "Authorization"
         client = get_llm_client()
 
     assert isinstance(client, QwenLLMClient)
@@ -40,8 +42,10 @@ def test_factory_default_is_mock() -> None:
     assert isinstance(client, MockLLMClient)
 
 
-def test_factory_qwen_client_uses_config_url() -> None:
+def test_factory_qwen_client_uses_endpoint_registry() -> None:
+    """Factory wires up an EndpointRegistry; resolution deferred to request time."""
     from app.llm.client_factory import get_llm_client
+    from app.llm.endpoint_registry import EndpointRegistry
     from app.llm.qwen_client import QwenLLMClient
 
     with patch("app.core.config.settings") as mock_settings:
@@ -49,12 +53,12 @@ def test_factory_qwen_client_uses_config_url() -> None:
         mock_settings.QWEN_LLM_BASE_URL = "http://my-vllm:9000"
         mock_settings.QWEN_LLM_MODEL = "qwen3.6"
         mock_settings.QWEN_LLM_TIMEOUT_SECONDS = 15.0
+        mock_settings.QWEN_ENDPOINT_REGISTRY_MODE = "env"
+        mock_settings.QWEN_LLM_AUTH_HEADER = "Authorization"
         client = get_llm_client()
 
     assert isinstance(client, QwenLLMClient)
-    assert client._base_url == "http://my-vllm:9000"
-    assert client._model == "qwen3.6"
-    assert client._timeout == 15.0
+    assert isinstance(client._endpoint_registry, EndpointRegistry)
 
 
 def test_factory_does_not_call_provider_at_import() -> None:
