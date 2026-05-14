@@ -12,7 +12,7 @@
 
 | 티켓 | Mock 항목 | 현재 로직 | 교체 대상 (Real) |
 |------|-----------|-----------|------------------|
-| T-018 | **LLM 응답 생성** | `app/llm/mock_client.py` — 프롬프트 해시 기반으로 고정된 4-섹션(결론/근거/행동/주의) 한국어 답변 반환. 외부 네트워크·API 키 불필요. | **Anthropic Claude API** (`claude-opus-4-7` 또는 `claude-sonnet-4-6`). `LLMPort.complete()` 인터페이스를 구현하는 `AnthropicLLMClient` 신규 작성. |
+| T-018 | **LLM 응답 생성** | ~~`app/llm/mock_client.py` — 프롬프트 해시 기반으로 고정된 4-섹션(결론/근거/행동/주의) 한국어 답변 반환. 외부 네트워크·API 키 불필요.~~ **✅ TICKET-049에서 교체됨** — `app/llm/qwen_client.py` (`QwenLLMClient`, vLLM OpenAI-호환 엔드포인트). `LLM_BACKEND=qwen` 설정 시 Qwen3.6 실 모델 호출. `MockLLMClient`는 테스트 전용으로 유지. | 추가 개선: **Anthropic Claude API** (`claude-opus-4-7` 또는 `claude-sonnet-4-6`)로 전환 가능. `LLMPort.complete()` 인터페이스 그대로 유지. |
 | T-032 | **LLM 자기치유(Self-Healing)** | `app/llm/mock_healing_client.py` — 첫 번째 호출 시 고의로 섹션 마커 없는 기형 응답을 반환해 재시도 파이프라인을 테스트. 실제 재생성 로직 없음. | Anthropic Claude API 동일 모델. 자기치유 오케스트레이터(`self_healing_orchestrator.py`)는 이미 구현돼 있으므로 `MockHealingLLMClient` → `AnthropicLLMClient`로 주입만 교체. |
 | T-030 | **비전 분석(Vision Analysis)** | `app/llm/mock_vision_client.py` — 이미지 URI 경로 키워드(pest/yellow/wilt/spot/healthy)를 기반으로 고정된 한국어 시각 증상 반환. 실제 이미지 디코딩 없음. | **Anthropic Claude Vision API** (`claude-sonnet-4-6`). `VisionPort.analyze()` 구현체에서 `base64` 인코딩 이미지를 `image` 블록으로 전송. |
 | T-031 | **음성 변환 STT / TTS** | `app/llm/mock_audio_client.py` — STT: URI 키워드 매핑 → 6개 고정 한국어 녹취록. TTS: 텍스트 해시 기반 가짜 오디오 URI 생성, 실제 음성 파일 없음. | **STT** — Google Cloud Speech-to-Text v2 (`chirp` 모델, `ko-KR`). **TTS** — Google Cloud Text-to-Speech (`ko-KR-Neural2-C` 보이스). `AudioPort` 인터페이스 그대로 유지. |

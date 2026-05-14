@@ -30,7 +30,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("mqtt.worker")
 
-SUBSCRIBE_TOPIC = "sensor/readings/+"
+SUBSCRIBE_TOPICS = ["sensor/readings/+", "sunshine/+/readings"]
 
 _MQTT_HOST = os.getenv("MQTT_HOST", "mqtt")
 _MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
@@ -41,8 +41,9 @@ _MQTT_CLIENT_ID = os.getenv("MQTT_CLIENT_ID", "sunshine-mqtt-ingest")
 def _on_connect(client: mqtt.Client, userdata, flags, rc, properties=None) -> None:
     if rc == 0:
         logger.info("connected to MQTT broker %s:%s", _MQTT_HOST, _MQTT_PORT)
-        client.subscribe(SUBSCRIBE_TOPIC)
-        logger.info("subscribed to %s", SUBSCRIBE_TOPIC)
+        for topic in SUBSCRIBE_TOPICS:
+            client.subscribe(topic)
+            logger.info("subscribed to %s", topic)
     else:
         logger.error("MQTT connect failed, rc=%s", rc)
 

@@ -13,10 +13,12 @@ Rules:
 from __future__ import annotations
 
 import uuid
+from datetime import UTC
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.environment_snapshot import EnvironmentSnapshot
+from app.models.sensor_reading import SensorReading
 from app.repositories.environment_detail_repository import EnvironmentDetailRepository
 from app.schemas.environment_detail import (
     CharacterExplanation,
@@ -39,6 +41,33 @@ _EXPLANATIONS: dict[str, str] = {
 }
 
 _FALLBACK_EXPLANATION = "환경 데이터를 분석 중이에요."
+
+
+def _raw_to_window_snapshot(row: SensorReading) -> WindowSnapshot:
+    """Build a synthetic 'latest' WindowSnapshot from a single raw reading."""
+
+    def _f(v: object) -> float | None:
+        return float(v) if v is not None else None
+
+    ts = row.measured_at
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=UTC)
+
+    def _stat(v: object) -> MetricStats:
+        fv = _f(v)
+        return MetricStats(avg=fv, min=fv, max=fv)
+
+    return WindowSnapshot(
+        window="latest",
+        window_start=ts,
+        window_end=ts,
+        temperature_c=_stat(row.temperature_c),
+        humidity_pct=_stat(row.humidity_pct),
+        light_lux=_stat(row.light_lux),
+        soil_moisture_pct=_stat(row.soil_moisture_pct),
+        source="raw_sensor_reading_fallback",
+        sample_count=1,
+    )
 
 
 def _to_window_snapshot(row: EnvironmentSnapshot) -> WindowSnapshot:
@@ -69,6 +98,7 @@ def _to_window_snapshot(row: EnvironmentSnapshot) -> WindowSnapshot:
             min=_f(row.soil_moisture_min_pct),
             max=_f(row.soil_moisture_max_pct),
         ),
+        source="snapshot",
     )
 
 
@@ -89,6 +119,15 @@ class EnvironmentDetailService:
             await self._repo.get_snapshot_by_window(plant_id, "7d"),
         )
 
+        # Fallback: if no pre-computed latest snapshot, synthesise from raw reading
+        latest_ws: WindowSnapshot | None = None
+        if latest_row is not None:
+            latest_ws = _to_window_snapshot(latest_row)
+        else:
+            raw = await self._repo.get_latest_sensor_reading(plant_id)
+            if raw is not None:
+                latest_ws = _raw_to_window_snapshot(raw)
+
         # Character explanation from hardcoded templates
         char_row = await self._repo.get_latest_character(plant_id)
         character_explanation: CharacterExplanation | None = None
@@ -103,7 +142,7 @@ class EnvironmentDetailService:
             plant_id=plant.id,
             nickname=plant.nickname,
             room_name=plant.room_name,
-            latest=_to_window_snapshot(latest_row) if latest_row else None,
+            latest=latest_ws,
             summary_24h=_to_window_snapshot(row_24h) if row_24h else None,
             summary_7d=_to_window_snapshot(row_7d) if row_7d else None,
             character_explanation=character_explanation,

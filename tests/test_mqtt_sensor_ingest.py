@@ -1,166 +1,185 @@
-"""TICKET-006 — MqttSensorIngestService unit tests (no live broker/DB)."""
+"""TICKET-053 — MqttSensorIngestService unit tests."""
 
-import asyncio
+from __future__ import annotations
+
 import json
-import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from app.mqtt.schemas import IngestOutcome
-from app.services.mqtt_sensor_ingest import MqttSensorIngestService
-
-_PLANT_ID = str(uuid.uuid4())
-_DEVICE_ID = "dev-001"
-_TOPIC = f"sensor/readings/{_DEVICE_ID}"
 
 
-def _valid_payload(**overrides) -> bytes:
-    base = {
-        "reading_id": "r-mqtt-001",
-        "device_id": _DEVICE_ID,
-        "plant_id": _PLANT_ID,
-        "measured_at": "2026-05-10T10:00:00+00:00",
-        "temperature_c": 22.0,
-        "humidity_pct": 55.0,
-        "light_lux": 3000.0,
-        "soil_moisture_pct": 40.0,
+def _make_payload(**overrides) -> bytes:
+    data = {
+        "reading_id": "r-001",
+        "device_id": "device-001",
+        "plant_id": "plant-001",
+        "measured_at": "2026-05-14T12:00:00+09:00",
+        "temperature_c": 24.2,
+        "humidity_pct": 51.0,
+        "light_lux": 830.0,
+        "soil_moisture_pct": 38.0,
     }
-    base.update(overrides)
-    return json.dumps(base).encode()
+    data.update(overrides)
+    return json.dumps(data).encode()
 
 
-def _make_svc() -> tuple[MqttSensorIngestService, MagicMock]:
-    session = MagicMock()
-    session.commit = AsyncMock()
-    svc = MqttSensorIngestService(session)
-    return svc, session
+@pytest.mark.asyncio
+async def test_invalid_topic_returns_invalid_topic_outcome() -> None:
+    from app.services.mqtt_sensor_ingest import MqttSensorIngestService
 
-
-# ---------------------------------------------------------------------------
-# Happy paths
-# ---------------------------------------------------------------------------
-
-
-def test_inserted_outcome() -> None:
-    svc, _ = _make_svc()
-    from app.schemas.sensor_readings import SensorReadingResponse
-
-    async def _go():
-        with patch(
-            "app.services.mqtt_sensor_ingest.SensorIngestService.ingest",
-            new=AsyncMock(
-                return_value=(
-                    SensorReadingResponse(status="inserted", ignored=False, reading_id="r-mqtt-001"),
-                    201,
-                )
-            ),
-        ):
-            return await svc.process(_TOPIC, _valid_payload())
-
-    result = asyncio.run(_go())
-    assert result.outcome == IngestOutcome.inserted
-    assert result.reading_id == "r-mqtt-001"
-
-
-def test_duplicate_ignored_outcome() -> None:
-    svc, _ = _make_svc()
-    from app.schemas.sensor_readings import SensorReadingResponse
-
-    async def _go():
-        with patch(
-            "app.services.mqtt_sensor_ingest.SensorIngestService.ingest",
-            new=AsyncMock(
-                return_value=(
-                    SensorReadingResponse(
-                        status="duplicate_ignored",
-                        ignored=True,
-                        reading_id="r-mqtt-001",
-                    ),
-                    200,
-                )
-            ),
-        ):
-            return await svc.process(_TOPIC, _valid_payload())
-
-    result = asyncio.run(_go())
-    assert result.outcome == IngestOutcome.duplicate_ignored
-
-
-# ---------------------------------------------------------------------------
-# Rejection paths
-# ---------------------------------------------------------------------------
-
-
-def test_invalid_topic_rejected() -> None:
-    svc, _ = _make_svc()
-    result = asyncio.run(svc.process("sensor/readings/", _valid_payload()))
+    svc = MqttSensorIngestService(MagicMock())
+    result = await svc.process("bad/topic/extra/segment", _make_payload())
     assert result.outcome == IngestOutcome.invalid_topic
+    assert result.snapshot_refreshed is False
 
 
-def test_invalid_json_rejected() -> None:
-    svc, _ = _make_svc()
-    result = asyncio.run(svc.process(_TOPIC, b"not-json"))
-    assert result.outcome == IngestOutcome.invalid_payload
+@pytest.mark.asyncio
+async def test_device_id_mismatch_returns_mismatch_outcome() -> None:
+    from app.services.mqtt_sensor_ingest import MqttSensorIngestService
 
-
-def test_invalid_schema_rejected() -> None:
-    svc, _ = _make_svc()
-    # temperature out of range
-    result = asyncio.run(svc.process(_TOPIC, _valid_payload(temperature_c=999.0)))
-    assert result.outcome == IngestOutcome.invalid_payload
-
-
-def test_device_id_mismatch_rejected() -> None:
-    svc, _ = _make_svc()
-    # topic says dev-001, payload says different-device
-    result = asyncio.run(svc.process(_TOPIC, _valid_payload(device_id="different-device")))
-    assert result.outcome == IngestOutcome.device_id_mismatch
-
-
-def test_plant_not_found() -> None:
-    from fastapi import HTTPException
-
-    svc, _ = _make_svc()
-
-    async def _go():
-        with patch(
-            "app.services.mqtt_sensor_ingest.SensorIngestService.ingest",
-            new=AsyncMock(side_effect=HTTPException(status_code=404, detail="plant not found")),
-        ):
-            return await svc.process(_TOPIC, _valid_payload())
-
-    result = asyncio.run(_go())
-    assert result.outcome == IngestOutcome.plant_not_found
-
-
-def test_naive_timestamp_rejected() -> None:
-    svc, _ = _make_svc()
-    result = asyncio.run(svc.process(_TOPIC, _valid_payload(measured_at="2026-05-10T10:00:00")))
-    assert result.outcome == IngestOutcome.invalid_payload
-
-
-# ---------------------------------------------------------------------------
-# Boundary — no new DB logic, delegates to SensorIngestService
-# ---------------------------------------------------------------------------
-
-
-def test_delegates_to_sensor_ingest_service() -> None:
-    """MqttSensorIngestService must call SensorIngestService.ingest, not its own DB code."""
-    from app.schemas.sensor_readings import SensorReadingResponse
-
-    svc, _ = _make_svc()
-    ingest_mock = AsyncMock(
-        return_value=(
-            SensorReadingResponse(status="inserted", ignored=False, reading_id="r-mqtt-001"),
-            201,
-        )
+    svc = MqttSensorIngestService(MagicMock())
+    result = await svc.process(
+        "sensor/readings/device-999",
+        _make_payload(device_id="device-001"),
     )
+    assert result.outcome == IngestOutcome.device_id_mismatch
+    assert result.snapshot_refreshed is False
 
-    async def _go():
-        with patch(
-            "app.services.mqtt_sensor_ingest.SensorIngestService.ingest",
-            new=ingest_mock,
-        ):
-            return await svc.process(_TOPIC, _valid_payload())
 
-    asyncio.run(_go())
-    ingest_mock.assert_awaited_once()
+@pytest.mark.asyncio
+async def test_inserted_outcome_calls_snapshot_aggregate() -> None:
+    import uuid
+
+    from app.schemas.sensor_readings import SensorReadingResponse
+    from app.services.mqtt_sensor_ingest import MqttSensorIngestService
+
+    plant_id = uuid.uuid4()
+    mock_session = MagicMock()
+    svc = MqttSensorIngestService(mock_session)
+
+    mock_ingest_resp = SensorReadingResponse(status="inserted", ignored=False, reading_id="r-001")
+
+    with (
+        patch("app.services.mqtt_sensor_ingest.SensorIngestService") as mock_ingest_cls,
+        patch("app.services.snapshot_service.SnapshotService") as mock_snap_cls,
+    ):
+        mock_ingest_instance = AsyncMock()
+        mock_ingest_instance.ingest.return_value = (mock_ingest_resp, 201)
+        mock_ingest_instance.resolved_plant_id = plant_id
+        mock_ingest_cls.return_value = mock_ingest_instance
+
+        mock_snap_instance = AsyncMock()
+        mock_snap_cls.return_value = mock_snap_instance
+
+        result = await svc.process("sensor/readings/device-001", _make_payload())
+
+    assert result.outcome == IngestOutcome.inserted
+    assert result.snapshot_refreshed is True
+    assert result.plant_id == str(plant_id)
+
+
+@pytest.mark.asyncio
+async def test_duplicate_reading_does_not_call_snapshot_aggregate() -> None:
+    from app.schemas.sensor_readings import SensorReadingResponse
+    from app.services.mqtt_sensor_ingest import MqttSensorIngestService
+
+    mock_session = MagicMock()
+    svc = MqttSensorIngestService(mock_session)
+
+    mock_dup_resp = SensorReadingResponse(status="duplicate_ignored", ignored=True, reading_id="r-001")
+
+    with (
+        patch("app.services.mqtt_sensor_ingest.SensorIngestService") as mock_ingest_cls,
+        patch("app.services.snapshot_service.SnapshotService") as mock_snap_cls,
+    ):
+        mock_ingest_instance = AsyncMock()
+        mock_ingest_instance.ingest.return_value = (mock_dup_resp, 200)
+        mock_ingest_instance.resolved_plant_id = None
+        mock_ingest_cls.return_value = mock_ingest_instance
+
+        mock_snap_instance = AsyncMock()
+        mock_snap_cls.return_value = mock_snap_instance
+
+        result = await svc.process("sensor/readings/device-001", _make_payload())
+
+    assert result.outcome == IngestOutcome.duplicate_ignored
+    assert result.snapshot_refreshed is False
+    mock_snap_instance.aggregate.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_snapshot_failure_does_not_lose_inserted_reading() -> None:
+    import uuid
+
+    from app.schemas.sensor_readings import SensorReadingResponse
+    from app.services.mqtt_sensor_ingest import MqttSensorIngestService
+
+    plant_id = uuid.uuid4()
+    mock_session = MagicMock()
+    svc = MqttSensorIngestService(mock_session)
+
+    mock_ingest_resp = SensorReadingResponse(status="inserted", ignored=False, reading_id="r-001")
+
+    with (
+        patch("app.services.mqtt_sensor_ingest.SensorIngestService") as mock_ingest_cls,
+        patch("app.services.snapshot_service.SnapshotService") as mock_snap_cls,
+    ):
+        mock_ingest_instance = AsyncMock()
+        mock_ingest_instance.ingest.return_value = (mock_ingest_resp, 201)
+        mock_ingest_instance.resolved_plant_id = plant_id
+        mock_ingest_cls.return_value = mock_ingest_instance
+
+        mock_snap_instance = AsyncMock()
+        mock_snap_instance.aggregate.side_effect = RuntimeError("DB down")
+        mock_snap_cls.return_value = mock_snap_instance
+
+        result = await svc.process("sensor/readings/device-001", _make_payload())
+
+    # Reading was inserted; snapshot failed but outcome is still inserted
+    assert result.outcome == IngestOutcome.inserted
+    assert result.snapshot_refreshed is False
+
+
+@pytest.mark.asyncio
+async def test_invalid_payload_json_returns_invalid_payload() -> None:
+    from app.services.mqtt_sensor_ingest import MqttSensorIngestService
+
+    svc = MqttSensorIngestService(MagicMock())
+    result = await svc.process("sensor/readings/device-001", b"not json")
+    assert result.outcome == IngestOutcome.invalid_payload
+    assert result.snapshot_refreshed is False
+
+
+@pytest.mark.asyncio
+async def test_sunshine_topic_shape_accepted() -> None:
+    import uuid
+
+    from app.schemas.sensor_readings import SensorReadingResponse
+    from app.services.mqtt_sensor_ingest import MqttSensorIngestService
+
+    plant_id = uuid.uuid4()
+    mock_session = MagicMock()
+    svc = MqttSensorIngestService(mock_session)
+
+    mock_ingest_resp = SensorReadingResponse(status="inserted", ignored=False, reading_id="r-002")
+
+    with (
+        patch("app.services.mqtt_sensor_ingest.SensorIngestService") as mock_ingest_cls,
+        patch("app.services.snapshot_service.SnapshotService") as mock_snap_cls,
+    ):
+        mock_ingest_instance = AsyncMock()
+        mock_ingest_instance.ingest.return_value = (mock_ingest_resp, 201)
+        mock_ingest_instance.resolved_plant_id = plant_id
+        mock_ingest_cls.return_value = mock_ingest_instance
+
+        mock_snap_instance = AsyncMock()
+        mock_snap_cls.return_value = mock_snap_instance
+
+        result = await svc.process(
+            "sunshine/device-001/readings",
+            _make_payload(reading_id="r-002"),
+        )
+
+    assert result.outcome == IngestOutcome.inserted

@@ -1,4 +1,4 @@
-"""HybridRetriever — TICKET-014C.
+"""HybridRetriever — TICKET-014C / TICKET-048.
 
 Two-stage retrieval:
   1. Relational pre-filter: resolve species_profile_id → plant_knowledge_entries
@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.rag import IncompatibleEmbeddingError
 from app.domain.retrieval import (
     RAG_LAYER_TO_CHUNK_KINDS,
     RetrievalFilter,
@@ -33,14 +34,43 @@ if TYPE_CHECKING:
     from app.embedding.local_embedding_service import LocalEmbeddingService
 
 
+def _chunk_kind_to_rag_layer(chunk_kind: str) -> str | None:
+    for layer, kinds in RAG_LAYER_TO_CHUNK_KINDS.items():
+        if chunk_kind in kinds:
+            return layer
+    return None
+
+
+def _is_compatible(
+    emb_row: PlantChunkEmbedding,
+    expected_model: str | None,
+    expected_dim: int | None,
+) -> bool:
+    if expected_model is not None:
+        if not isinstance(emb_row.model_name, str):
+            return True  # non-str attribute (e.g., test mock) — let through
+        if emb_row.model_name != expected_model:
+            return False
+    if expected_dim is not None:
+        if not isinstance(emb_row.vector_dim, int):
+            return True  # non-int attribute (e.g., test mock) — let through
+        if emb_row.vector_dim != expected_dim:
+            return False
+    return True
+
+
 class HybridRetriever:
     def __init__(
         self,
         session: AsyncSession,
         embedding_service: LocalEmbeddingService,
+        expected_model: str | None = None,
+        expected_dim: int | None = None,
     ) -> None:
         self.session = session
         self.emb = embedding_service
+        self._expected_model = expected_model
+        self._expected_dim = expected_dim
 
     async def retrieve(self, f: RetrievalFilter) -> list[RetrievedChunkResult]:
         # ---- 1. resolve allowed chunk kinds from RAG layers ----------------
@@ -72,7 +102,20 @@ class HybridRetriever:
         emb_result = await self.session.execute(
             select(PlantChunkEmbedding).where(PlantChunkEmbedding.chunk_document_id.in_(doc_ids))
         )
-        embeddings_by_doc = {e.chunk_document_id: e for e in emb_result.scalars().all()}
+        all_embeddings = {e.chunk_document_id: e for e in emb_result.scalars().all()}
+
+        # ---- 4b. filter incompatible embeddings ---------------------------
+        embeddings_by_doc = {
+            doc_id: emb_row
+            for doc_id, emb_row in all_embeddings.items()
+            if _is_compatible(emb_row, self._expected_model, self._expected_dim)
+        }
+        if all_embeddings and not embeddings_by_doc:
+            raise IncompatibleEmbeddingError(
+                f"All {len(all_embeddings)} candidate embeddings are incompatible "
+                f"with model={self._expected_model!r} dim={self._expected_dim}. "
+                "Rebuild the embedding store with the current model settings."
+            )
 
         # ---- 5. embed question + score ------------------------------------
         query_vec = self.emb.embed(f.question)
@@ -85,7 +128,8 @@ class HybridRetriever:
             score = _dot(query_vec, emb_row.vector)
             scored.append((score, doc))
 
-        scored.sort(key=lambda t: t[0], reverse=True)
+        # deterministic: higher score first, then ascending chunk_id as tiebreaker
+        scored.sort(key=lambda t: (-t[0], str(t[1].id)))
         top = scored[: f.top_k]
 
         return [
@@ -96,6 +140,7 @@ class HybridRetriever:
                 chunk_text=doc.chunk_text,
                 similarity_score=round(score, 6),
                 rank=rank + 1,
+                rag_layer=_chunk_kind_to_rag_layer(doc.chunk_kind),
             )
             for rank, (score, doc) in enumerate(top)
         ]

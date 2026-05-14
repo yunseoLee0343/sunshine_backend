@@ -22,6 +22,17 @@ class Settings(BaseSettings):
 
     SPECIES_CLASSIFIER_PROVIDER: str = "mock"
 
+    PLANT_KNOWLEDGE_EXCEL_PATH: str = "data/전체식물_분류정보_v1_updated_7_2.xlsx"
+
+    EMBEDDING_MODEL_NAME: str = "Qwen/Qwen3-Embedding-0.6B"
+    EMBEDDING_VECTOR_DIM: int = 1024
+    EMBEDDING_NORMALIZE: bool = True
+
+    LLM_BACKEND: str = "mock"
+    QWEN_LLM_MODEL: str = "qwen3.6"
+    QWEN_LLM_BASE_URL: str = "http://localhost:8080"
+    QWEN_LLM_TIMEOUT_SECONDS: float = 30.0
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     @model_validator(mode="after")

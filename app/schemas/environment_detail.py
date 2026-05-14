@@ -22,6 +22,8 @@ class WindowSnapshot(BaseModel):
     humidity_pct: MetricStats
     light_lux: MetricStats
     soil_moisture_pct: MetricStats
+    source: str | None = None  # "snapshot" | "raw_sensor_reading_fallback"
+    sample_count: int | None = None
 
 
 class CharacterExplanation(BaseModel):

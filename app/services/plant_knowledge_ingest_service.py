@@ -33,8 +33,8 @@ from app.models.plant_visual_trait import PlantVisualTrait
 # ---------------------------------------------------------------------------
 
 COLUMN_MAP: dict[str, list[str]] = {
-    "nongsaro_id": ["고유번호", "농사로ID", "ID", "id"],
-    "korean_name": ["식물명", "한국명", "국명"],
+    "nongsaro_id": ["농사로ID", "고유번호", "ID", "id"],
+    "korean_name": ["한국명", "식물명", "국명"],
     "scientific_name": ["학명", "Scientific Name"],
     "common_name": ["영문명", "영명", "Common Name"],
     "family": ["과명", "과"],
@@ -44,21 +44,21 @@ COLUMN_MAP: dict[str, list[str]] = {
     "watering_frequency": ["물주기", "관수주기", "관수"],
     "soil_type": ["토양", "배양토"],
     "fertilizer_info": ["비료", "시비"],
-    "spring_watering": ["봄 물주기", "봄물주기", "봄"],
-    "summer_watering": ["여름 물주기", "여름물주기", "여름"],
-    "autumn_watering": ["가을 물주기", "가을물주기", "가을"],
-    "winter_watering": ["겨울 물주기", "겨울물주기", "겨울"],
+    "spring_watering": ["물주기_봄", "봄 물주기", "봄물주기", "봄"],
+    "summer_watering": ["물주기_여름", "여름 물주기", "여름물주기", "여름"],
+    "autumn_watering": ["물주기_가을", "가을 물주기", "가을물주기", "가을"],
+    "winter_watering": ["물주기_겨울", "겨울 물주기", "겨울물주기", "겨울"],
     "pest_text": ["병충해", "충해"],
-    "disease_text": ["질병", "병해"],
-    "leaf_color": ["잎 색상", "잎색", "엽색"],
-    "leaf_shape": ["잎 형태", "엽형"],
-    "flower_color": ["꽃 색상", "화색"],
-    "flower_season": ["개화기", "개화 시기", "꽃 시기"],
-    "height_text": ["초장", "높이", "식물 높이"],
-    "placement_locations": ["배치 장소", "재배 환경", "실내외"],
-    "is_toxic_raw": ["독성 유무", "독성여부", "독성"],
+    "disease_text": ["병충해관리", "질병", "병해"],
+    "leaf_color": ["잎색", "잎 색상", "엽색"],
+    "leaf_shape": ["잎형태", "잎 형태", "엽형"],
+    "flower_color": ["꽃색", "꽃 색상", "화색"],
+    "flower_season": ["꽃피는계절", "개화기", "개화 시기", "꽃 시기"],
+    "height_text": ["성장높이(cm)", "초장", "높이", "식물 높이"],
+    "placement_locations": ["배치장소", "배치 장소", "재배 환경", "실내외"],
+    "is_toxic_raw": ["독성", "독성 유무", "독성여부"],
     "toxicity_detail": ["독성 설명", "독성 상세"],
-    "fragrance": ["향기", "냄새"],
+    "fragrance": ["냄새", "향기"],
 }
 
 _PEST_SPLIT_RE = re.compile(r"[,、\n·및]+")
@@ -117,21 +117,16 @@ class PlantKnowledgeIngestService:
     # ---------------------------------------------------------------------- public
 
     async def ingest_file(self, file_path: str | Path) -> IngestSummary:
-        import openpyxl
+        from app.ingestion.excel_loader import load_workbook_rows
 
         path = Path(file_path)
         summary = IngestSummary(source_file=str(path))
 
-        wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
-        ws = wb.active
-
-        rows = list(ws.iter_rows(values_only=True))
-        if not rows:
+        headers, data_rows = load_workbook_rows(path)
+        if not headers:
             return summary
 
-        headers = [str(h) if h is not None else "" for h in rows[0]]
         col_index = _build_col_index(headers)
-        data_rows = rows[1:]
         summary.total_rows = len(data_rows)
 
         for row_num, raw_row in enumerate(data_rows, start=2):
@@ -140,7 +135,7 @@ class PlantKnowledgeIngestService:
                     raw_row=raw_row,
                     col_index=col_index,
                     row_number=row_num,
-                    source_file=str(path),
+                    source_file=path.name,
                 )
                 if status == "inserted":
                     summary.inserted += 1
@@ -152,7 +147,6 @@ class PlantKnowledgeIngestService:
                 summary.errors += 1
                 summary.error_details.append(f"row {row_num}: {exc}")
 
-        wb.close()
         return summary
 
     # ---------------------------------------------------------------------- private
@@ -168,6 +162,10 @@ class PlantKnowledgeIngestService:
         if not nongsaro_id:
             raise ValueError("nongsaro_id is missing")
 
+        scientific_name = _str(_get(raw_row, col_index, "scientific_name"))
+        if not scientific_name:
+            raise ValueError("scientific_name is required")
+
         korean_name = _str(_get(raw_row, col_index, "korean_name")) or nongsaro_id
         row_hash = _row_hash(list(raw_row))
         now = datetime.now(UTC)
@@ -182,7 +180,7 @@ class PlantKnowledgeIngestService:
             # Hash changed → update child tables
             await self._update_children(existing_entry, raw_row, col_index, now)
             existing_entry.korean_name = korean_name
-            existing_entry.scientific_name = _str(_get(raw_row, col_index, "scientific_name"))
+            existing_entry.scientific_name = scientific_name
             existing_entry.common_name = _str(_get(raw_row, col_index, "common_name"))
             existing_entry.family = _str(_get(raw_row, col_index, "family"))
             existing_entry.origin = _str(_get(raw_row, col_index, "origin"))
@@ -195,7 +193,7 @@ class PlantKnowledgeIngestService:
             id=uuid.uuid4(),
             nongsaro_id=nongsaro_id,
             korean_name=korean_name,
-            scientific_name=_str(_get(raw_row, col_index, "scientific_name")),
+            scientific_name=scientific_name,
             common_name=_str(_get(raw_row, col_index, "common_name")),
             family=_str(_get(raw_row, col_index, "family")),
             origin=_str(_get(raw_row, col_index, "origin")),

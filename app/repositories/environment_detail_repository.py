@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.environment_snapshot import EnvironmentSnapshot
 from app.models.plant import Plant
 from app.models.plant_character import PlantCharacter
+from app.models.sensor_reading import SensorReading
 
 
 class EnvironmentDetailRepository:
@@ -39,6 +40,16 @@ class EnvironmentDetailRepository:
                 EnvironmentSnapshot.window == window,
             )
             .order_by(EnvironmentSnapshot.window_end.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_latest_sensor_reading(self, plant_id: uuid.UUID) -> SensorReading | None:
+        """Return the single most recent sensor reading for the plant."""
+        result = await self.session.execute(
+            select(SensorReading)
+            .where(SensorReading.plant_id == plant_id)
+            .order_by(SensorReading.measured_at.desc())
             .limit(1)
         )
         return result.scalar_one_or_none()

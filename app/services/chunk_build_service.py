@@ -1,12 +1,14 @@
-"""ChunkBuildService — TICKET-014B.
+"""ChunkBuildService — TICKET-047 (updated from TICKET-014B).
 
 Reads 14A relational data, builds deterministic text chunks, embeds them
 with a local model, and upserts results into plant_chunk_documents /
-plant_chunk_embeddings. Idempotent: skips chunks whose text_hash is unchanged.
+plant_chunk_embeddings. Idempotent: skips chunks whose text_hash is unchanged
+AND whose embedding model/dim matches the current service.
 """
 
 from __future__ import annotations
 
+import math
 import uuid
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
@@ -79,8 +81,15 @@ class ChunkBuildService:
             for i, chunk in enumerate(chunks):
                 existing = await self._get_doc(entry.id, chunk.chunk_kind)
                 if existing is not None and existing.text_hash == chunk.text_hash:
-                    docs.append(existing)
-                    summary.skipped += 1
+                    if await self._is_embedding_current(existing):
+                        docs.append(existing)
+                        summary.skipped += 1
+                    else:
+                        # Stale embedding (wrong model/dim) — re-embed without text change
+                        docs.append(existing)
+                        summary.updated += 1
+                        texts_to_embed.append(chunk.text)
+                        chunks_needing_embed.append(i)
                 else:
                     if existing is not None:
                         existing.chunk_text = chunk.text
@@ -109,11 +118,22 @@ class ChunkBuildService:
                 vectors = self.emb.embed_batch(texts_to_embed)
                 for idx, vec in zip(chunks_needing_embed, vectors):
                     doc = docs[idx]
-                    await self._upsert_embedding(doc, vec, now)  # type: ignore[arg-type]
+                    chunk = chunks[idx]
+                    await self._upsert_embedding(doc, vec, now, chunk.text_hash)  # type: ignore[arg-type]
 
         except Exception as exc:  # noqa: BLE001
             summary.errors += 1
             summary.error_details.append(f"entry {entry.id}: {exc}")
+
+    async def _is_embedding_current(self, doc: PlantChunkDocument) -> bool:
+        """Return True when the stored embedding matches the current model name and dim."""
+        result = await self.session.execute(
+            select(PlantChunkEmbedding).where(PlantChunkEmbedding.chunk_document_id == doc.id)
+        )
+        emb = result.scalar_one_or_none()
+        if emb is None:
+            return False
+        return emb.model_name == self.emb.model_name and emb.vector_dim == self.emb.embedding_dim
 
     async def _get_one(self, model, entry_id: uuid.UUID):
         result = await self.session.execute(select(model).where(model.entry_id == entry_id))
@@ -133,7 +153,9 @@ class ChunkBuildService:
         doc: PlantChunkDocument,
         vector: list[float],
         now: datetime,
+        text_hash: str | None = None,
     ) -> None:
+        norm = math.sqrt(sum(x * x for x in vector))
         result = await self.session.execute(
             select(PlantChunkEmbedding).where(PlantChunkEmbedding.chunk_document_id == doc.id)
         )
@@ -142,6 +164,8 @@ class ChunkBuildService:
             existing.vector = vector
             existing.vector_dim = len(vector)
             existing.model_name = self.emb.model_name
+            existing.vector_norm = norm
+            existing.text_hash_at_embed = text_hash
             existing.updated_at = now
         else:
             self.session.add(
@@ -151,6 +175,8 @@ class ChunkBuildService:
                     model_name=self.emb.model_name,
                     vector_dim=len(vector),
                     vector=vector,
+                    vector_norm=norm,
+                    text_hash_at_embed=text_hash,
                     created_at=now,
                     updated_at=now,
                 )

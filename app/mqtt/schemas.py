@@ -19,3 +19,5 @@ class MqttIngestResult:
     outcome: IngestOutcome
     reading_id: str | None = None
     detail: str | None = None
+    plant_id: str | None = None
+    snapshot_refreshed: bool = False

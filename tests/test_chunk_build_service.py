@@ -23,6 +23,7 @@ def _mock_session():
 def _mock_emb(dim: int = 4):
     emb = MagicMock()
     emb.model_name = "test-model"
+    emb.embedding_dim = dim
     emb.embed_batch = MagicMock(return_value=[[0.1] * dim])
     return emb
 
@@ -115,6 +116,7 @@ async def test_build_for_entry_skips_unchanged_chunk():
 
     with patch("app.services.chunk_build_service.build_all_chunks", return_value=chunks_built):
         svc = ChunkBuildService(session=sess, embedding_service=_mock_emb())
+        svc._is_embedding_current = AsyncMock(return_value=True)
         summary = await svc.build_for_entry(entry.id)
 
     assert summary.skipped == 1
@@ -235,4 +237,5 @@ async def test_upsert_embedding_updates_existing():
 
     assert existing_emb.vector == new_vec
     assert existing_emb.vector_dim == 4
+    assert existing_emb.model_name == emb_svc.model_name
     sess.flush.assert_called_once()

@@ -625,12 +625,12 @@ async def run_seed(session: AsyncSession) -> SeedResult:
     # 4. Sensor readings
     await _ensure_sensor_readings(session, result)
 
-    # 5. Environment snapshots (1h, 24h, 7d)
+    # 5. Environment snapshots (latest, 24h, 7d)
     await _ensure_snapshot(
         session,
         result,
-        window="1h",
-        window_start=_BASE - timedelta(hours=1),
+        window="latest",
+        window_start=_BASE,
         window_end=_BASE,
         soil_moisture_avg=Decimal("18.0"),
     )

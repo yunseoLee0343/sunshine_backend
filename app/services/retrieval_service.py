@@ -1,4 +1,4 @@
-"""RetrievalService — TICKET-014C.
+"""RetrievalService — TICKET-014C / TICKET-048.
 
 Orchestrates: idempotency check → hybrid retrieval → persist run + results.
 No LLM, no answer generation.
@@ -7,6 +7,7 @@ No LLM, no answer generation.
 from __future__ import annotations
 
 import hashlib
+import json
 import uuid
 from datetime import UTC, datetime
 
@@ -41,9 +42,20 @@ class RetrievalService:
         if cached is not None:
             return await self._load_cached(cached)
 
-        # ---- retrieve ------------------------------------------------------
+        # ---- embed query ---------------------------------------------------
         emb = _get_embedding_service()
-        retriever = HybridRetriever(self.session, emb)
+        query_vec = emb.embed(req.question)
+        query_vector_hash = hashlib.sha256(
+            json.dumps(query_vec, default=str).encode()
+        ).hexdigest()
+
+        # ---- retrieve ------------------------------------------------------
+        retriever = HybridRetriever(
+            self.session,
+            emb,
+            expected_model=emb.model_name,
+            expected_dim=emb.embedding_dim,
+        )
         filt = RetrievalFilter(
             question=req.question,
             species_profile_id=req.species_profile_id,
@@ -57,12 +69,15 @@ class RetrievalService:
         run = RetrievalRun(
             id=req.request_id,
             user_id=req.user_id,
+            plant_id=req.plant_id,
             question=req.question,
             question_hash=hashlib.sha256(req.question.encode()).hexdigest(),
             species_profile_id=req.species_profile_id,
             rag_layers=list(req.rag_layers),
             top_k=req.top_k,
             model_name=emb.model_name,
+            embedding_model_rev=emb.model_rev,
+            query_vector_hash=query_vector_hash,
             total_results=len(results),
             created_at=now,
         )

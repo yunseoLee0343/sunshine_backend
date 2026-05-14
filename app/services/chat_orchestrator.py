@@ -29,16 +29,18 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.retrieval import RagLayer
+from app.llm.client_factory import get_llm_client
 from app.llm.mock_audio_client import MockAudioClient
-from app.llm.mock_client import MockLLMClient
 from app.llm.mock_vision_client import MockVisionClient
-from app.services.audio_port import AudioMetadata
 from app.models.chat_request import ChatRequest
 from app.models.llm_run import LlmRun
+from app.models.llm_self_healing_log import LlmSelfHealingLog
 from app.models.plant import Plant
 from app.schemas.chat_answer import ChatAnswerResponse, ParsedAnswer
 from app.schemas.evidence_bundle import EvidenceBuildRequest
 from app.schemas.retrieval import RetrievalRequest
+from app.services.audio_port import AudioMetadata
+from app.services.chat_evaluation_service import ChatEvaluationService
 from app.services.chat_intent_classifier import ChatIntentClassifier
 from app.services.companion_recommendation_service import (
     CompanionRecommendationService,
@@ -46,19 +48,17 @@ from app.services.companion_recommendation_service import (
     companion_prompt_hash,
     format_companion_answer,
 )
-from app.models.llm_self_healing_log import LlmSelfHealingLog
 from app.services.evidence_builder import EvidenceBuilderService, PlantNotFoundError
 from app.services.llm_port import LLMRequest
 from app.services.pest_reference_guardrail import PestReferenceGuardrail
 from app.services.prompt_builder import PromptBuilder
 from app.services.response_parser import parse_answer
 from app.services.retrieval_service import RetrievalService
-from app.services.chat_evaluation_service import ChatEvaluationService
 from app.services.self_healing_orchestrator import SelfHealingOrchestrator
 
 _CLASSIFIER = ChatIntentClassifier()
 _PROMPT_BUILDER = PromptBuilder()
-_LLM_CLIENT = MockLLMClient()
+_LLM_CLIENT = get_llm_client()
 _PEST_GUARDRAIL = PestReferenceGuardrail()
 _VISION_CLIENT = MockVisionClient()
 _AUDIO_CLIENT = MockAudioClient()
