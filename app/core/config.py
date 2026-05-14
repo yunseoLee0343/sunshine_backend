@@ -22,6 +22,8 @@ class Settings(BaseSettings):
 
     SPECIES_CLASSIFIER_PROVIDER: str = "mock"
 
+    PLANT_KNOWLEDGE_EXCEL_PATH: str = "data/전체식물_분류정보_v1_updated_7_2.xlsx"
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     @model_validator(mode="after")
