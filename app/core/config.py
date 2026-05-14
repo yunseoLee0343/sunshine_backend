@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     EMBEDDING_VECTOR_DIM: int = 1024
     EMBEDDING_NORMALIZE: bool = True
 
+    LLM_BACKEND: str = "mock"
+    QWEN_LLM_MODEL: str = "qwen3.6"
+    QWEN_LLM_BASE_URL: str = "http://localhost:8080"
+    QWEN_LLM_TIMEOUT_SECONDS: float = 30.0
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     @model_validator(mode="after")
