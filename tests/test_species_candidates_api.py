@@ -79,14 +79,14 @@ def test_monstera_returns_candidates() -> None:
     assert "candidates" in body
     assert len(body["candidates"]) >= 1
     first = body["candidates"][0]
-    assert first["label_ko"] == "몬스테라"
+    assert first["label_ko"] == "몬스테라 델리시오사"
     assert first["label_en"] == "Monstera"
     assert first["scientific_name"] == "Monstera deliciosa"
-    assert first["confidence"] == 0.91
-    assert first["confidence_label"] == "high"
-    assert first["source"] == "mock"
+    assert first["confidence"] == 0.60
+    assert first["confidence_label"] == "medium"
+    assert first["source"] == "catalog_mock"
     assert "species_profile_id" in first
-    assert first["species_profile_id"] is None  # no catalog DB match
+    assert first["species_profile_id"] is None  # no catalog DB match in test
 
 
 def test_same_request_same_response() -> None:
@@ -106,7 +106,8 @@ def test_same_request_same_response() -> None:
     assert body_a == body_b
 
 
-def test_unknown_image_ref_returns_fallback() -> None:
+def test_uuid_image_ref_returns_catalog_candidates() -> None:
+    """UUID upload refs now return catalog candidates instead of fallback (T-060A3)."""
     _setup_overrides()
     try:
         status, body = asyncio.run(
@@ -114,7 +115,7 @@ def test_unknown_image_ref_returns_fallback() -> None:
                 "/plants/species-candidates",
                 {
                     "user_id": str(uuid.uuid4()),
-                    "image_ref": "uploads/mock/unrecognized-plant.jpg",
+                    "image_ref": "4aa78846-cf8c-4d2b-87cb-365e9e64a2cc.jpg",
                     "locale": "ko-KR",
                     "top_k": 3,
                 },
@@ -125,12 +126,9 @@ def test_unknown_image_ref_returns_fallback() -> None:
 
     assert status == 200
     first = body["candidates"][0]
-    assert first["label_ko"] == "잘 모르겠어요"
-    assert first["label_en"] == "Unknown"
-    assert first["scientific_name"] is None
-    assert first["confidence"] == 0.0
-    assert first["confidence_label"] == "low"
-    assert first["species_profile_id"] is None
+    assert first["label_ko"] != "잘 모르겠어요"
+    assert first["scientific_name"] is not None
+    assert first["source"] == "catalog_mock"
 
 
 def test_response_excludes_diagnosis_fields() -> None:

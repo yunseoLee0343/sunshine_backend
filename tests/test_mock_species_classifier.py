@@ -1,6 +1,6 @@
-"""TICKET-003 — MockSpeciesClassifier behavior tests.
+"""TICKET-060A3 — MockSpeciesClassifier behavior tests.
 
-Verifies deterministic keyword matching, fallback behavior, and confirms
+Verifies catalog-aligned deterministic output, top_k, and confirms
 no file/network/model side-effects occur during classification.
 """
 
@@ -19,71 +19,91 @@ def _classify(image_ref: str, **kwargs):
 
 
 # ---------------------------------------------------------------------------
-# Keyword matching — known species
+# Any image_ref returns catalog candidates (no keyword matching)
 # ---------------------------------------------------------------------------
 
 
-def test_monstera_english_keyword() -> None:
+def test_any_image_ref_returns_candidates() -> None:
     result = _classify("uploads/mock/monstera.jpg")
-    assert result[0].label_ko == "몬스테라"
+    assert len(result) >= 1
+    assert result[0].label_ko == "몬스테라 델리시오사"
+
+
+def test_uuid_image_ref_returns_candidates() -> None:
+    result = _classify("4aa78846-cf8c-4d2b-87cb-365e9e64a2cc.jpg")
+    assert len(result) >= 1
+    assert result[0].scientific_name == "Monstera deliciosa"
+
+
+def test_empty_image_ref_returns_candidates() -> None:
+    result = _classify("")
+    assert len(result) >= 1
+    assert result[0].label_ko == "몬스테라 델리시오사"
+
+
+def test_unknown_image_ref_returns_catalog_candidates_not_fallback() -> None:
+    result = _classify("uploads/mock/unrecognized-plant.jpg")
+    assert result[0].label_ko != "잘 모르겠어요"
+    assert result[0].scientific_name is not None
+
+
+# ---------------------------------------------------------------------------
+# Candidate values
+# ---------------------------------------------------------------------------
+
+
+def test_first_candidate_is_monstera() -> None:
+    result = _classify("any-ref")
+    assert result[0].label_ko == "몬스테라 델리시오사"
     assert result[0].label_en == "Monstera"
     assert result[0].scientific_name == "Monstera deliciosa"
-    assert result[0].confidence == 0.91
-    assert result[0].confidence_label == "high"
-    assert result[0].source == "mock"
-
-
-def test_monstera_korean_keyword() -> None:
-    result = _classify("uploads/mock/몬스테라.jpg")
-    assert result[0].label_ko == "몬스테라"
-    assert result[0].scientific_name == "Monstera deliciosa"
-
-
-def test_pothos_english_keyword() -> None:
-    result = _classify("uploads/mock/pothos.jpg")
-    assert result[0].label_ko == "스킨답서스"
-    assert result[0].label_en == "Pothos"
-    assert result[0].scientific_name == "Epipremnum aureum"
-    assert result[0].confidence == 0.88
-
-
-def test_pothos_korean_keyword() -> None:
-    result = _classify("uploads/mock/스킨답서스.jpg")
-    assert result[0].label_ko == "스킨답서스"
-
-
-def test_philodendron_english_keyword() -> None:
-    result = _classify("uploads/mock/philodendron.jpg")
-    assert result[0].label_ko == "필로덴드론"
-    assert result[0].label_en == "Philodendron"
-    assert result[0].scientific_name == "Philodendron hederaceum"
-    assert result[0].confidence == 0.84
+    assert result[0].confidence == 0.60
     assert result[0].confidence_label == "medium"
+    assert result[0].source == "catalog_mock"
 
 
-def test_philodendron_korean_keyword() -> None:
-    result = _classify("uploads/mock/필로덴드론.jpg")
-    assert result[0].label_ko == "필로덴드론"
+def test_second_candidate_is_skinnapseoseu() -> None:
+    result = _classify("any-ref", top_k=3)
+    assert result[1].label_ko == "스킨답서스"
+    assert result[1].scientific_name == "Epipremnum aureum"
+    assert result[1].confidence == 0.50
+    assert result[1].confidence_label == "medium"
+    assert result[1].source == "catalog_mock"
+
+
+def test_third_candidate_is_spathiphyllum() -> None:
+    result = _classify("any-ref", top_k=3)
+    assert result[2].label_ko == "스파티필름"
+    assert result[2].scientific_name == "Spathiphyllum wallisii"
+    assert result[2].confidence == 0.45
+    assert result[2].confidence_label == "low"
+    assert result[2].source == "catalog_mock"
 
 
 # ---------------------------------------------------------------------------
-# Fallback / unknown
+# top_k
 # ---------------------------------------------------------------------------
 
 
-def test_unknown_image_ref_returns_fallback() -> None:
-    result = _classify("uploads/mock/unrecognized-plant.jpg")
-    assert result[0].label_ko == "잘 모르겠어요"
-    assert result[0].label_en == "Unknown"
-    assert result[0].scientific_name is None
-    assert result[0].confidence == 0.0
-    assert result[0].confidence_label == "low"
-    assert result[0].source == "mock"
+def test_top_k_one_returns_single_candidate() -> None:
+    result = _classify("any-ref", top_k=1)
+    assert len(result) == 1
+    assert result[0].label_ko == "몬스테라 델리시오사"
 
 
-def test_empty_image_ref_returns_fallback() -> None:
-    result = _classify("")
-    assert result[0].label_ko == "잘 모르겠어요"
+def test_top_k_two_returns_two_candidates() -> None:
+    result = _classify("any-ref", top_k=2)
+    assert len(result) == 2
+
+
+def test_top_k_three_returns_three_candidates() -> None:
+    result = _classify("any-ref", top_k=3)
+    assert len(result) == 3
+
+
+def test_top_k_zero_returns_at_least_one() -> None:
+    result = _classify("any-ref", top_k=0)
+    assert len(result) >= 1
 
 
 # ---------------------------------------------------------------------------
@@ -97,33 +117,10 @@ def test_same_image_ref_returns_same_output() -> None:
     assert [c.model_dump() for c in a] == [c.model_dump() for c in b]
 
 
-def test_unknown_same_input_same_output() -> None:
-    a = _classify("uploads/mock/foo.jpg")
-    b = _classify("uploads/mock/foo.jpg")
+def test_different_image_refs_return_same_output() -> None:
+    a = _classify("any-uuid-ref.jpg")
+    b = _classify("uploads/mock/pothos.jpg")
     assert [c.model_dump() for c in a] == [c.model_dump() for c in b]
-
-
-# ---------------------------------------------------------------------------
-# top_k
-# ---------------------------------------------------------------------------
-
-
-def test_top_k_one_returns_single_candidate() -> None:
-    result = _classify("uploads/mock/monstera.jpg", top_k=1)
-    assert len(result) == 1
-    assert result[0].label_ko == "몬스테라"
-
-
-def test_top_k_three_returns_up_to_three_for_known() -> None:
-    result = _classify("uploads/mock/monstera.jpg", top_k=3)
-    assert 1 <= len(result) <= 3
-    assert result[0].label_ko == "몬스테라"
-
-
-def test_top_k_one_for_unknown_returns_fallback_only() -> None:
-    result = _classify("uploads/mock/foo.jpg", top_k=1)
-    assert len(result) == 1
-    assert result[0].label_ko == "잘 모르겠어요"
 
 
 # ---------------------------------------------------------------------------
@@ -141,16 +138,10 @@ def test_classify_does_not_open_files(monkeypatch) -> None:
 
     monkeypatch.setattr(builtins, "open", fake_open)
     _classify("uploads/mock/monstera.jpg")
-    # The classifier itself must never call open() during classification.
-    # (Other test machinery may, but we assert classify produced no extra open calls
-    # specifically referencing the image_ref path.)
     assert not any("monstera" in c for c in calls), f"open() touched image_ref: {calls}"
 
 
 def test_classify_does_not_open_socket(monkeypatch) -> None:
-    # Spy on socket.socket: count calls strictly during classify_species.
-    # The asyncio runtime itself opens a socketpair when constructing a new
-    # event loop, so we measure the delta around the awaited call.
     real_socket = socket.socket
     counter = {"n": 0}
 
@@ -171,7 +162,6 @@ def test_classify_does_not_open_socket(monkeypatch) -> None:
 
 
 def test_classify_does_not_import_heavy_libs() -> None:
-    """Heavy ML / image libraries must not be importable side-effects of classify."""
     import sys
 
     classifier = MockSpeciesClassifier()
@@ -200,9 +190,9 @@ def test_classify_does_not_import_heavy_libs() -> None:
     "image_ref",
     [
         "uploads/mock/monstera.jpg",
-        "uploads/mock/pothos.jpg",
-        "uploads/mock/philodendron.jpg",
+        "4aa78846-cf8c-4d2b-87cb-365e9e64a2cc.jpg",
         "uploads/mock/foo.jpg",
+        "",
     ],
 )
 def test_no_diagnosis_fields(image_ref: str) -> None:
