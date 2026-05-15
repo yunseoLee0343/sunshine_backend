@@ -15,6 +15,8 @@ from app.api.plants import get_session, get_species_classifier
 from app.main import app
 from app.vision.mock_species_classifier import MockSpeciesClassifier
 
+_CATALOG_BASE = "app.services.species_candidate_service.SpeciesRepository"
+
 
 async def _post(path: str, body: dict) -> tuple[int, dict]:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -38,13 +40,15 @@ def _clear_overrides() -> None:
 
 
 @pytest.fixture(autouse=True)
-def _patch_new_repo_methods():
-    """Patch the T-003E repo methods so existing tests don't break."""
-    base = "app.services.species_candidate_service.SpeciesRepository"
+def _patch_catalog_repo_methods():
+    """Patch all catalog-constrained repo methods so no live DB is required."""
     with (
-        patch(f"{base}.find_by_scientific_name_normalized", new=AsyncMock(return_value=None)),
-        patch(f"{base}.find_by_common_name_normalized", new=AsyncMock(return_value=None)),
-        patch(f"{base}.find_by_alias", new=AsyncMock(return_value=None)),
+        patch(f"{_CATALOG_BASE}.find_catalog_by_scientific_name", new=AsyncMock(return_value=None)),
+        patch(f"{_CATALOG_BASE}.find_catalog_by_korean_name", new=AsyncMock(return_value=None)),
+        patch(f"{_CATALOG_BASE}.find_catalog_by_common_name", new=AsyncMock(return_value=None)),
+        patch(f"{_CATALOG_BASE}.find_catalog_by_scientific_name_normalized", new=AsyncMock(return_value=None)),
+        patch(f"{_CATALOG_BASE}.find_catalog_by_common_name_normalized", new=AsyncMock(return_value=None)),
+        patch(f"{_CATALOG_BASE}.find_catalog_by_alias", new=AsyncMock(return_value=None)),
     ):
         yield
 
@@ -57,31 +61,17 @@ def _patch_new_repo_methods():
 def test_monstera_returns_candidates() -> None:
     _setup_overrides()
     try:
-        with (
-            patch(
-                "app.services.species_candidate_service.SpeciesRepository.find_by_scientific_name",
-                new=AsyncMock(return_value=None),
-            ),
-            patch(
-                "app.services.species_candidate_service.SpeciesRepository.find_by_korean_name",
-                new=AsyncMock(return_value=None),
-            ),
-            patch(
-                "app.services.species_candidate_service.SpeciesRepository.find_by_common_name",
-                new=AsyncMock(return_value=None),
-            ),
-        ):
-            status, body = asyncio.run(
-                _post(
-                    "/plants/species-candidates",
-                    {
-                        "user_id": str(uuid.uuid4()),
-                        "image_ref": "uploads/mock/monstera.jpg",
-                        "locale": "ko-KR",
-                        "top_k": 3,
-                    },
-                )
+        status, body = asyncio.run(
+            _post(
+                "/plants/species-candidates",
+                {
+                    "user_id": str(uuid.uuid4()),
+                    "image_ref": "uploads/mock/monstera.jpg",
+                    "locale": "ko-KR",
+                    "top_k": 3,
+                },
             )
+        )
     finally:
         _clear_overrides()
 
@@ -96,7 +86,7 @@ def test_monstera_returns_candidates() -> None:
     assert first["confidence_label"] == "high"
     assert first["source"] == "mock"
     assert "species_profile_id" in first
-    assert first["species_profile_id"] is None  # no DB match
+    assert first["species_profile_id"] is None  # no catalog DB match
 
 
 def test_same_request_same_response() -> None:
@@ -108,22 +98,8 @@ def test_same_request_same_response() -> None:
         "top_k": 3,
     }
     try:
-        with (
-            patch(
-                "app.services.species_candidate_service.SpeciesRepository.find_by_scientific_name",
-                new=AsyncMock(return_value=None),
-            ),
-            patch(
-                "app.services.species_candidate_service.SpeciesRepository.find_by_korean_name",
-                new=AsyncMock(return_value=None),
-            ),
-            patch(
-                "app.services.species_candidate_service.SpeciesRepository.find_by_common_name",
-                new=AsyncMock(return_value=None),
-            ),
-        ):
-            _, body_a = asyncio.run(_post("/plants/species-candidates", payload))
-            _, body_b = asyncio.run(_post("/plants/species-candidates", payload))
+        _, body_a = asyncio.run(_post("/plants/species-candidates", payload))
+        _, body_b = asyncio.run(_post("/plants/species-candidates", payload))
     finally:
         _clear_overrides()
 
@@ -133,31 +109,17 @@ def test_same_request_same_response() -> None:
 def test_unknown_image_ref_returns_fallback() -> None:
     _setup_overrides()
     try:
-        with (
-            patch(
-                "app.services.species_candidate_service.SpeciesRepository.find_by_scientific_name",
-                new=AsyncMock(return_value=None),
-            ),
-            patch(
-                "app.services.species_candidate_service.SpeciesRepository.find_by_korean_name",
-                new=AsyncMock(return_value=None),
-            ),
-            patch(
-                "app.services.species_candidate_service.SpeciesRepository.find_by_common_name",
-                new=AsyncMock(return_value=None),
-            ),
-        ):
-            status, body = asyncio.run(
-                _post(
-                    "/plants/species-candidates",
-                    {
-                        "user_id": str(uuid.uuid4()),
-                        "image_ref": "uploads/mock/unrecognized-plant.jpg",
-                        "locale": "ko-KR",
-                        "top_k": 3,
-                    },
-                )
+        status, body = asyncio.run(
+            _post(
+                "/plants/species-candidates",
+                {
+                    "user_id": str(uuid.uuid4()),
+                    "image_ref": "uploads/mock/unrecognized-plant.jpg",
+                    "locale": "ko-KR",
+                    "top_k": 3,
+                },
             )
+        )
     finally:
         _clear_overrides()
 
@@ -174,29 +136,15 @@ def test_unknown_image_ref_returns_fallback() -> None:
 def test_response_excludes_diagnosis_fields() -> None:
     _setup_overrides()
     try:
-        with (
-            patch(
-                "app.services.species_candidate_service.SpeciesRepository.find_by_scientific_name",
-                new=AsyncMock(return_value=None),
-            ),
-            patch(
-                "app.services.species_candidate_service.SpeciesRepository.find_by_korean_name",
-                new=AsyncMock(return_value=None),
-            ),
-            patch(
-                "app.services.species_candidate_service.SpeciesRepository.find_by_common_name",
-                new=AsyncMock(return_value=None),
-            ),
-        ):
-            _, body = asyncio.run(
-                _post(
-                    "/plants/species-candidates",
-                    {
-                        "user_id": str(uuid.uuid4()),
-                        "image_ref": "uploads/mock/monstera.jpg",
-                    },
-                )
+        _, body = asyncio.run(
+            _post(
+                "/plants/species-candidates",
+                {
+                    "user_id": str(uuid.uuid4()),
+                    "image_ref": "uploads/mock/monstera.jpg",
+                },
             )
+        )
     finally:
         _clear_overrides()
 
@@ -219,24 +167,16 @@ def test_response_excludes_diagnosis_fields() -> None:
 
 
 def test_species_profile_id_populated_when_db_matches() -> None:
-    """Optional resolution: if scientific_name matches a row, return its id."""
+    """Optional resolution: if scientific_name matches a catalog row, return its id."""
     _setup_overrides()
     matched = MagicMock()
     matched.id = uuid.UUID("00000000-0000-0000-0000-000000000201")
+    matched.korean_name = "몬스테라"
+    matched.scientific_name = "Monstera deliciosa"
     try:
-        with (
-            patch(
-                "app.services.species_candidate_service.SpeciesRepository.find_by_scientific_name",
-                new=AsyncMock(return_value=matched),
-            ),
-            patch(
-                "app.services.species_candidate_service.SpeciesRepository.find_by_korean_name",
-                new=AsyncMock(return_value=None),
-            ),
-            patch(
-                "app.services.species_candidate_service.SpeciesRepository.find_by_common_name",
-                new=AsyncMock(return_value=None),
-            ),
+        with patch(
+            f"{_CATALOG_BASE}.find_catalog_by_scientific_name",
+            new=AsyncMock(return_value=matched),
         ):
             _, body = asyncio.run(
                 _post(
@@ -259,18 +199,6 @@ def test_endpoint_does_not_create_plant_or_character() -> None:
     _setup_overrides()
     try:
         with (
-            patch(
-                "app.services.species_candidate_service.SpeciesRepository.find_by_scientific_name",
-                new=AsyncMock(return_value=None),
-            ),
-            patch(
-                "app.services.species_candidate_service.SpeciesRepository.find_by_korean_name",
-                new=AsyncMock(return_value=None),
-            ),
-            patch(
-                "app.services.species_candidate_service.SpeciesRepository.find_by_common_name",
-                new=AsyncMock(return_value=None),
-            ),
             patch(
                 "app.services.plant_onboarding.PlantOnboardingService.create_plant",
                 new=AsyncMock(),
@@ -305,30 +233,16 @@ def test_endpoint_does_not_create_plant_or_character() -> None:
 def test_response_keys_exactly_allowed_set() -> None:
     _setup_overrides()
     try:
-        with (
-            patch(
-                "app.services.species_candidate_service.SpeciesRepository.find_by_scientific_name",
-                new=AsyncMock(return_value=None),
-            ),
-            patch(
-                "app.services.species_candidate_service.SpeciesRepository.find_by_korean_name",
-                new=AsyncMock(return_value=None),
-            ),
-            patch(
-                "app.services.species_candidate_service.SpeciesRepository.find_by_common_name",
-                new=AsyncMock(return_value=None),
-            ),
-        ):
-            _, body = asyncio.run(
-                _post(
-                    "/plants/species-candidates",
-                    {
-                        "user_id": str(uuid.uuid4()),
-                        "image_ref": "uploads/mock/monstera.jpg",
-                        "top_k": 1,
-                    },
-                )
+        _, body = asyncio.run(
+            _post(
+                "/plants/species-candidates",
+                {
+                    "user_id": str(uuid.uuid4()),
+                    "image_ref": "uploads/mock/monstera.jpg",
+                    "top_k": 1,
+                },
             )
+        )
     finally:
         _clear_overrides()
 
