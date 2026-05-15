@@ -65,35 +65,41 @@ beforeEach(() => {
 })
 
 describe('fetchHome', () => {
-  it('returns plants from /home when response contains a valid plants array', async () => {
+  it('calls /home with { params: { user_id: DEMO_USER_ID } }', async () => {
+    mockGet.mockResolvedValueOnce({ data: { user_id: 'u1', plants: [mockPlant] } })
+    await fetchHome()
+    expect(mockGet).toHaveBeenNthCalledWith(1, '/home', { params: { user_id: DEMO_USER_ID } })
+  })
+
+  it('returns plants from /home when response contains a valid plants array (no fallback)', async () => {
     mockGet.mockResolvedValueOnce({ data: { user_id: 'u1', plants: [mockPlant] } })
     const result = await fetchHome()
     expect(result.plants).toEqual([mockPlant])
     expect(mockGet).toHaveBeenCalledTimes(1)
   })
 
-  it('falls back to /plants when /home returns 422', async () => {
-    const err422 = Object.assign(new Error('422'), { response: { status: 422 } })
+  it('falls back to /plants with user_id param when /home returns 500', async () => {
+    const err500 = Object.assign(new Error('500'), { response: { status: 500 } })
     mockGet
-      .mockRejectedValueOnce(err422)
+      .mockRejectedValueOnce(err500)
       .mockResolvedValueOnce({ data: { plants: [mockPlant] } })
 
     const result = await fetchHome()
     expect(result.plants).toEqual([mockPlant])
-    expect(mockGet).toHaveBeenCalledTimes(2)
+    expect(mockGet).toHaveBeenNthCalledWith(2, '/plants', { params: { user_id: DEMO_USER_ID } })
   })
 
-  it('falls back to /plants when /home returns { plants: undefined }', async () => {
+  it('falls back to /plants with user_id param when /home returns { plants: undefined }', async () => {
     mockGet
       .mockResolvedValueOnce({ data: { plants: undefined } })
       .mockResolvedValueOnce({ data: { plants: [mockPlant] } })
 
     const result = await fetchHome()
     expect(result.plants).toEqual([mockPlant])
-    expect(mockGet).toHaveBeenCalledTimes(2)
+    expect(mockGet).toHaveBeenNthCalledWith(2, '/plants', { params: { user_id: DEMO_USER_ID } })
   })
 
-  it('returns empty plants when both /home and /plants fail', async () => {
+  it('rejects when both /home and /plants fail', async () => {
     mockGet
       .mockRejectedValueOnce(new Error('home fail'))
       .mockRejectedValueOnce(new Error('plants fail'))

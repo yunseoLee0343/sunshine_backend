@@ -17,7 +17,9 @@ export function normalizeHomePlants(data: unknown): PlantHomeCard[] {
 
 export async function fetchHome(): Promise<HomeResponse> {
   try {
-    const { data } = await client.get<HomeResponse>('/home')
+    const { data } = await client.get<HomeResponse>('/home', {
+      params: { user_id: DEMO_USER_ID },
+    })
     const plants = normalizeHomePlants(data)
     if (plants.length > 0 || Array.isArray((data as any)?.plants)) {
       return {
@@ -25,14 +27,13 @@ export async function fetchHome(): Promise<HomeResponse> {
         plants,
       }
     }
-  } catch (err: any) {
-    const status = err?.response?.status
-    if (status !== 422) {
-      console.warn('[fetchHome] /home failed; falling back to /plants', err)
-    }
+  } catch (err) {
+    console.warn('[fetchHome] /home failed; falling back to /plants', err)
   }
 
-  const { data } = await client.get('/plants')
+  const { data } = await client.get('/plants', {
+    params: { user_id: DEMO_USER_ID },
+  })
   return {
     user_id: (data as any)?.user_id ?? DEMO_USER_ID,
     plants: normalizeHomePlants(data),
