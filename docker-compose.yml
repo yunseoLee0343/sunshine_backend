@@ -9,6 +9,20 @@ services:
       APP_NAME: sunshine-backend
       APP_ENV: local
       DATABASE_URL: postgresql+asyncpg://sunshine:change-me-local-only@postgres:5432/sunshine
+
+      # LLM runtime selection
+      LLM_BACKEND: qwen
+
+      # Dynamic RunPod/vLLM endpoint registry
+      QWEN_ENDPOINT_REGISTRY_MODE: db
+      QWEN_LLM_MODEL: qwen3.6
+      QWEN_LLM_BASE_URL: http://localhost:8080
+      QWEN_LLM_TIMEOUT_SECONDS: "120"
+      QWEN_LLM_API_KEY: ""
+      QWEN_LLM_AUTH_HEADER: Authorization
+
+      # Internal endpoint registry API token
+      INTERNAL_TOKEN: change-this-internal-token
     depends_on:
       postgres:
         condition: service_healthy
