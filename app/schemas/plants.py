@@ -53,6 +53,10 @@ class SpeciesCandidateItem(BaseModel):
                 "confidence": 0.92,
                 "confidence_label": "high",
                 "source": "mock",
+                "display_name": "몬스테라",
+                "catalog_matched": True,
+                "raw_label": "Monstera deliciosa",
+                "match_reason": "scientific_name_exact",
             }
         }
     )
@@ -64,6 +68,11 @@ class SpeciesCandidateItem(BaseModel):
     confidence: float
     confidence_label: str
     source: str
+    # TICKET-060A1 — catalog contract extension
+    display_name: str | None = None
+    catalog_matched: bool = False
+    raw_label: str | None = None
+    match_reason: str | None = None
 
 
 class SpeciesCandidatesResponse(BaseModel):

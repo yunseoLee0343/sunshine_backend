@@ -17,6 +17,11 @@ export interface SpeciesCandidateItem {
   confidence: number
   confidence_label: 'high' | 'medium' | 'low'
   source: string
+  // TICKET-060A1 — catalog contract extension
+  display_name?: string | null
+  catalog_matched?: boolean
+  raw_label?: string | null
+  match_reason?: string | null
 }
 
 export interface SpeciesCandidatesResponse {

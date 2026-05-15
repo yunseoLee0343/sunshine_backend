@@ -340,6 +340,11 @@ def test_response_keys_exactly_allowed_set() -> None:
         "confidence",
         "confidence_label",
         "source",
+        # TICKET-060A1 — catalog contract extension
+        "display_name",
+        "catalog_matched",
+        "raw_label",
+        "match_reason",
     }
     for c in body["candidates"]:
         assert set(c.keys()) == expected
