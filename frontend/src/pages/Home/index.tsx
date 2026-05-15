@@ -13,8 +13,12 @@ export default function Home() {
 
   useEffect(() => {
     fetchHome()
-      .then((res) => setPlants(res.plants))
-      .catch(() => setError('식물 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.'))
+      .then((res) => setPlants(Array.isArray(res.plants) ? res.plants : []))
+      .catch((err) => {
+        console.error('[Home] failed to load plants', err)
+        setPlants([])
+        setError('식물 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.')
+      })
       .finally(() => setLoading(false))
   }, [])
 
