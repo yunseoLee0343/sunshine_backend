@@ -20,7 +20,10 @@ class Settings(BaseSettings):
     PLANT_ID_API_URL: str = "https://plant.id/api/v3"
     PLANT_ID_TIMEOUT_SECONDS: float = 10.0
 
-    SPECIES_CLASSIFIER_PROVIDER: str = "mock"
+    SPECIES_CLASSIFIER_PROVIDER: str = "catalog_mock"  # catalog_mock | mock (alias) | plant_id | qwen_vl
+    QWEN_VL_MODEL: str = "qwen3-vl"
+    QWEN_VL_BASE_URL: str = ""
+    QWEN_VL_TIMEOUT_SECONDS: float = 120.0
 
     PLANT_KNOWLEDGE_EXCEL_PATH: str = "data/전체식물_분류정보_v1_updated_7_2.xlsx"
 
