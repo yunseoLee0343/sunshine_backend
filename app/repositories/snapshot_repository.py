@@ -54,6 +54,33 @@ class SnapshotRepository:
         )
         return list(result.scalars().all())
 
+    async def get_latest_per_metric(
+        self,
+        plant_id: uuid.UUID,
+        before: datetime,
+    ) -> dict[str, "SensorReading | None"]:
+        """Return the latest non-null reading per metric attribute.
+
+        Keys: temperature_c, humidity_pct, light_lux, soil_moisture_pct.
+        A key maps to None when no non-null reading exists for that metric.
+        """
+        _METRICS = ("temperature_c", "humidity_pct", "light_lux", "soil_moisture_pct")
+        result: dict[str, SensorReading | None] = {}
+        for attr in _METRICS:
+            col = getattr(SensorReading, attr)
+            row = await self.session.execute(
+                select(SensorReading)
+                .where(
+                    SensorReading.plant_id == plant_id,
+                    SensorReading.measured_at <= before,
+                    col.is_not(None),
+                )
+                .order_by(SensorReading.measured_at.desc())
+                .limit(1)
+            )
+            result[attr] = row.scalar_one_or_none()
+        return result
+
     # ------------------------------------------------------------------
     # environment_snapshots upsert
     # ------------------------------------------------------------------
@@ -105,7 +132,7 @@ class SnapshotRepository:
             pg_insert(EnvironmentSnapshot)
             .values(**values)
             .on_conflict_do_update(
-                index_elements=["plant_id", "window", "window_start", "window_end"],
+                index_elements=["plant_id", "window"],
                 set_=update_cols,
             )
         )

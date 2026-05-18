@@ -42,6 +42,10 @@ class Settings(BaseSettings):
 
     INTERNAL_TOKEN: str = ""
 
+    SENSOR_RAW_RETENTION_DAYS: int = 2
+    SENSOR_RETENTION_ENABLED: bool = True
+    SENSOR_RETENTION_BATCH_SIZE: int = 10000
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     @model_validator(mode="after")

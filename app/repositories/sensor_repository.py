@@ -28,10 +28,10 @@ class SensorRepository:
         device_id: str,
         plant_id: uuid.UUID,
         measured_at: datetime,
-        temperature_c: float,
-        humidity_pct: float,
-        light_lux: float,
-        soil_moisture_pct: float,
+        temperature_c: float | None,
+        humidity_pct: float | None,
+        light_lux: float | None,
+        soil_moisture_pct: float | None,
         created_at: datetime,
     ) -> SensorReading:
         row = SensorReading(

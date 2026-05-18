@@ -14,4 +14,6 @@ from app.models.retrieved_chunk import RetrievedChunk  # noqa: F401
 from app.models.sensor_reading import SensorReading  # noqa: F401
 from app.models.species_profile import SpeciesProfile  # noqa: F401
 from app.models.runtime_endpoint import RuntimeEndpoint  # noqa: F401
+from app.models.sensor_metric_rollup import SensorMetricRollup  # noqa: F401
+from app.models.plant_sensor_device import PlantSensorDevice  # noqa: F401
 from app.models.user import User  # noqa: F401
