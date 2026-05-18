@@ -43,6 +43,18 @@ class SensorReadingRequest(BaseModel):
         return v
 
     @model_validator(mode="after")
+    def at_least_one_metric(self) -> "SensorReadingRequest":
+        if all(
+            v is None
+            for v in (self.temperature_c, self.humidity_pct, self.light_lux, self.soil_moisture_pct)
+        ):
+            raise ValueError(
+                "at least one metric must be present "
+                "(temperature_c, humidity_pct, light_lux, or soil_moisture_pct)"
+            )
+        return self
+
+    @model_validator(mode="after")
     def reject_non_finite_numbers(self) -> "SensorReadingRequest":
         _reject_non_finite(self.temperature_c, "temperature_c")
         _reject_non_finite(self.humidity_pct, "humidity_pct")

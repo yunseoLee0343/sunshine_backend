@@ -50,6 +50,8 @@ DEMO_PHILODENDRON_SPECIES_ID = demo_id("species-philodendron")
 DEMO_SPATHIPHYLLUM_SPECIES_ID = demo_id("species-spathiphyllum")
 DEMO_SANSEVIERIA_SPECIES_ID = demo_id("species-sansevieria")
 DEMO_KNOWLEDGE_ID = demo_id("knowledge-monstera")
+DEMO_SOIL_DEVICE_ID = demo_id("device-esp32-soil-01")
+DEMO_LEAF_DEVICE_ID = demo_id("device-esp32-leaf-01")
 
 # Fixed base timestamp — keeps snapshots and readings deterministic
 _BASE = datetime(2024, 1, 15, 12, 0, 0, tzinfo=UTC)
@@ -190,6 +192,32 @@ async def _ensure_plant(session: AsyncSession, result: SeedResult) -> None:
     )
     session.add(row)
     result.record("created", "plant:초록이")
+
+
+async def _ensure_sensor_devices(session: AsyncSession, result: SeedResult) -> None:
+    from app.models.plant_sensor_device import PlantSensorDevice
+
+    _DEVICES = [
+        (DEMO_SOIL_DEVICE_ID, "esp32-soil-01", "soil", "soil"),
+        (DEMO_LEAF_DEVICE_ID, "esp32-leaf-01", "leaf_env", "leaf"),
+    ]
+    now = datetime.now(UTC)
+    for did, device_id, role, label in _DEVICES:
+        if await session.get(PlantSensorDevice, did) is not None:
+            result.record("skipped", f"device:{device_id}")
+            continue
+        row = PlantSensorDevice(
+            id=did,
+            plant_id=DEMO_PLANT_ID,
+            device_id=device_id,
+            device_role=role,
+            location_label=label,
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+        session.add(row)
+        result.record("created", f"device:{device_id}")
 
 
 async def _ensure_sensor_readings(session: AsyncSession, result: SeedResult) -> None:
@@ -621,6 +649,9 @@ async def run_seed(session: AsyncSession) -> SeedResult:
 
     # 3. Demo plant
     await _ensure_plant(session, result)
+
+    # 3b. ESP32 device mappings (TICKET-066)
+    await _ensure_sensor_devices(session, result)
 
     # 4. Sensor readings
     await _ensure_sensor_readings(session, result)

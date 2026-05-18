@@ -33,7 +33,11 @@ _7D = timedelta(days=7)
 
 
 def _stats(readings: list[SensorReading], attr: str) -> MetricStats:
-    values = [float(getattr(r, attr)) for r in readings]
+    values = [
+        float(value)
+        for r in readings
+        if (value := getattr(r, attr)) is not None
+    ]
     if not values:
         return MetricStats(avg=None, min=None, max=None)
     return MetricStats(
@@ -41,6 +45,12 @@ def _stats(readings: list[SensorReading], attr: str) -> MetricStats:
         min=min(values),
         max=max(values),
     )
+
+
+def _metric_stat(value: float | None) -> MetricStats:
+    if value is None:
+        return MetricStats(avg=None, min=None, max=None)
+    return MetricStats(avg=value, min=value, max=value)
 
 
 def _build_result(
@@ -80,11 +90,38 @@ class SnapshotService:
         results: list[EnvironmentSnapshotResult] = []
         created_at = datetime.now(UTC)
 
-        # --- latest ---
-        latest_row = await self.repo.get_latest_reading(plant_id, before=now)
-        if latest_row is not None:
-            ts = latest_row.measured_at
-            result = _build_result(plant_id, "latest", ts, ts, [latest_row])
+        # --- latest: metric-wise merge across devices (TICKET-066) ---
+        latest_per_metric = await self.repo.get_latest_per_metric(plant_id, before=now)
+        any_data = any(row is not None for row in latest_per_metric.values())
+        if any_data:
+            timestamps = [
+                row.measured_at
+                for row in latest_per_metric.values()
+                if row is not None
+            ]
+            window_start = min(timestamps)
+            window_end = max(timestamps)
+            seen_ids = {row.id for row in latest_per_metric.values() if row is not None}
+
+            def _val(key: str) -> float | None:
+                r = latest_per_metric[key]
+                if r is None:
+                    return None
+                v = getattr(r, key)
+                return float(v) if v is not None else None
+
+            result = EnvironmentSnapshotResult(
+                plant_id=plant_id,
+                window="latest",
+                window_start=window_start,
+                window_end=window_end,
+                status="ok",
+                sample_count=len(seen_ids),
+                temperature_c=_metric_stat(_val("temperature_c")),
+                humidity_pct=_metric_stat(_val("humidity_pct")),
+                light_lux=_metric_stat(_val("light_lux")),
+                soil_moisture_pct=_metric_stat(_val("soil_moisture_pct")),
+            )
             await self._persist(result, created_at)
         else:
             result = _build_result(plant_id, "latest", now, now, [])

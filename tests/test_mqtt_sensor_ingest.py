@@ -192,3 +192,119 @@ async def test_sunshine_topic_shape_accepted() -> None:
 
     assert result.outcome == IngestOutcome.inserted
     assert result.snapshot_refreshed is True
+
+
+# ---- TICKET-066: multi-device partial MQTT payloads ----
+
+
+@pytest.mark.asyncio
+async def test_esp32_soil_topic_accepted() -> None:
+    """sensor/readings/esp32-soil-01 topic with matching device_id is accepted."""
+    from app.schemas.sensor_readings import SensorReadingResponse
+    from app.services.mqtt_sensor_ingest import MqttSensorIngestService
+
+    plant_id = uuid.uuid4()
+    mock_session = _make_session()
+    svc = MqttSensorIngestService(mock_session)
+
+    mock_ingest_resp = SensorReadingResponse(status="inserted", ignored=False, reading_id="r-soil-01")
+
+    with (
+        patch("app.services.mqtt_sensor_ingest.SensorIngestService") as mock_ingest_cls,
+        patch("app.services.snapshot_service.SnapshotService") as mock_snap_cls,
+    ):
+        mock_ingest_instance = AsyncMock()
+        mock_ingest_instance.ingest.return_value = (mock_ingest_resp, 201)
+        mock_ingest_instance.resolved_plant_id = plant_id
+        mock_ingest_cls.return_value = mock_ingest_instance
+
+        mock_snap_instance = AsyncMock()
+        mock_snap_cls.return_value = mock_snap_instance
+
+        result = await svc.process(
+            "sensor/readings/esp32-soil-01",
+            _make_payload(reading_id="r-soil-01", device_id="esp32-soil-01"),
+        )
+
+    assert result.outcome == IngestOutcome.inserted
+    assert result.snapshot_refreshed is True
+
+
+@pytest.mark.asyncio
+async def test_soil_only_mqtt_payload_inserts_and_refreshes_snapshot() -> None:
+    """Soil-only partial payload (no temperature/humidity/light) is accepted."""
+    from app.schemas.sensor_readings import SensorReadingResponse
+    from app.services.mqtt_sensor_ingest import MqttSensorIngestService
+
+    plant_id = uuid.uuid4()
+    mock_session = _make_session()
+    svc = MqttSensorIngestService(mock_session)
+
+    mock_ingest_resp = SensorReadingResponse(status="inserted", ignored=False, reading_id="r-soil-02")
+
+    with (
+        patch("app.services.mqtt_sensor_ingest.SensorIngestService") as mock_ingest_cls,
+        patch("app.services.snapshot_service.SnapshotService") as mock_snap_cls,
+    ):
+        mock_ingest_instance = AsyncMock()
+        mock_ingest_instance.ingest.return_value = (mock_ingest_resp, 201)
+        mock_ingest_instance.resolved_plant_id = plant_id
+        mock_ingest_cls.return_value = mock_ingest_instance
+
+        mock_snap_instance = AsyncMock()
+        mock_snap_cls.return_value = mock_snap_instance
+
+        soil_only = json.dumps({
+            "reading_id": "r-soil-02",
+            "device_id": "esp32-soil-01",
+            "plant_id": "plant-001",
+            "measured_at": "2026-05-14T12:00:00+09:00",
+            "soil_moisture_pct": 42.0,
+        }).encode()
+
+        result = await svc.process("sensor/readings/esp32-soil-01", soil_only)
+
+    assert result.outcome == IngestOutcome.inserted
+    assert result.snapshot_refreshed is True
+    mock_snap_instance.aggregate.assert_awaited_once_with(plant_id)
+
+
+@pytest.mark.asyncio
+async def test_leaf_only_mqtt_payload_inserts_and_refreshes_snapshot() -> None:
+    """Leaf-env partial payload (no soil_moisture) is accepted."""
+    from app.schemas.sensor_readings import SensorReadingResponse
+    from app.services.mqtt_sensor_ingest import MqttSensorIngestService
+
+    plant_id = uuid.uuid4()
+    mock_session = _make_session()
+    svc = MqttSensorIngestService(mock_session)
+
+    mock_ingest_resp = SensorReadingResponse(status="inserted", ignored=False, reading_id="r-leaf-02")
+
+    with (
+        patch("app.services.mqtt_sensor_ingest.SensorIngestService") as mock_ingest_cls,
+        patch("app.services.snapshot_service.SnapshotService") as mock_snap_cls,
+    ):
+        mock_ingest_instance = AsyncMock()
+        mock_ingest_instance.ingest.return_value = (mock_ingest_resp, 201)
+        mock_ingest_instance.resolved_plant_id = plant_id
+        mock_ingest_cls.return_value = mock_ingest_instance
+
+        mock_snap_instance = AsyncMock()
+        mock_snap_cls.return_value = mock_snap_instance
+
+        leaf_only = json.dumps({
+            "reading_id": "r-leaf-02",
+            "device_id": "esp32-leaf-01",
+            "plant_id": "plant-001",
+            "measured_at": "2026-05-14T12:00:00+09:00",
+            "temperature_c": 23.0,
+            "humidity_pct": 58.0,
+            "light_lux": 720.0,
+        }).encode()
+
+        result = await svc.process("sensor/readings/esp32-leaf-01", leaf_only)
+
+    assert result.outcome == IngestOutcome.inserted
+    assert result.snapshot_refreshed is True
+    mock_snap_instance.aggregate.assert_awaited_once_with(plant_id)

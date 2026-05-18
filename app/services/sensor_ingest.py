@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.plant import Plant
 from app.repositories.plant_repository import PlantRepository
+from app.repositories.plant_sensor_device_repository import PlantSensorDeviceRepository
 from app.repositories.sensor_repository import SensorRepository
 from app.schemas.sensor_readings import SensorReadingRequest, SensorReadingResponse
 
@@ -42,6 +43,14 @@ class SensorIngestService:
 
         if plant is None:
             return None
+
+        # New: check plant_sensor_devices table for active device mapping.
+        device_repo = PlantSensorDeviceRepository(self.session)
+        active = await device_repo.find_active(plant.id, device_id)
+        if active is not None:
+            return plant
+
+        # Legacy fallback: honour plant.device_id if no table row found.
         if plant.device_id is not None and plant.device_id != device_id:
             return None
         return plant
