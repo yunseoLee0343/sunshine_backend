@@ -1,4 +1,4 @@
-"""TICKET-007 / TICKET-066 — SnapshotService unit tests (no live DB)."""
+"""TICKET-007 / TICKET-066 / TICKET-068 — SnapshotService unit tests (no live DB)."""
 
 from __future__ import annotations
 
@@ -14,7 +14,12 @@ from app.models.sensor_reading import SensorReading
 from app.schemas.environment_snapshots import (
     AggregationSummary,
 )
-from app.services.snapshot_service import SnapshotService, _metric_stat, _stats
+from app.services.snapshot_service import (
+    SnapshotService,
+    _metric_stat,
+    _rollup_stats,
+    _stats,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -45,6 +50,15 @@ def _reading(
     return r
 
 
+def _rollup(avg: float, min_: float, max_: float, count: int) -> MagicMock:
+    r = MagicMock()
+    r.avg_value = Decimal(str(avg))
+    r.min_value = Decimal(str(min_))
+    r.max_value = Decimal(str(max_))
+    r.sample_count = count
+    return r
+
+
 def _all_same(r: SensorReading) -> dict:
     return {"temperature_c": r, "humidity_pct": r, "light_lux": r, "soil_moisture_pct": r}
 
@@ -57,6 +71,18 @@ def _make_svc() -> tuple[SnapshotService, MagicMock]:
     session = MagicMock()
     svc = SnapshotService(session)
     return svc, session
+
+
+def _rollup_cls(per_metric: dict | None = None) -> MagicMock:
+    """Return a mock SensorRollupRepository *class* whose instances return the given rollups."""
+    per_metric = per_metric or {}
+
+    async def _get_rollups(plant_id, metric_name, bucket, start, end):
+        return per_metric.get(metric_name, [])
+
+    mock_repo = MagicMock()
+    mock_repo.get_rollups_in_range = _get_rollups
+    return MagicMock(return_value=mock_repo)
 
 
 # ---------------------------------------------------------------------------
@@ -123,6 +149,43 @@ def test_metric_stat_value() -> None:
 
 
 # ---------------------------------------------------------------------------
+# _rollup_stats helper (TICKET-068)
+# ---------------------------------------------------------------------------
+
+
+def test_rollup_stats_empty() -> None:
+    s = _rollup_stats([])
+    assert s.avg is None and s.min is None and s.max is None
+
+
+def test_rollup_stats_single() -> None:
+    s = _rollup_stats([_rollup(22.0, 20.0, 24.0, 5)])
+    assert s.avg == pytest.approx(22.0)
+    assert s.min == pytest.approx(20.0)
+    assert s.max == pytest.approx(24.0)
+
+
+def test_rollup_stats_weighted_average() -> None:
+    """Weighted average uses sample_count."""
+    r1 = _rollup(10.0, 10.0, 10.0, 2)  # contributes 20
+    r2 = _rollup(20.0, 20.0, 20.0, 8)  # contributes 160
+    s = _rollup_stats([r1, r2])
+    assert s.avg == pytest.approx(18.0)  # (20 + 160) / 10
+    assert s.min == pytest.approx(10.0)
+    assert s.max == pytest.approx(20.0)
+
+
+def test_rollup_stats_null_avg_skipped() -> None:
+    """Rollup rows with avg_value=None are excluded from computation."""
+    null_row = MagicMock()
+    null_row.avg_value = None
+    null_row.sample_count = 5
+    valid_row = _rollup(30.0, 30.0, 30.0, 3)
+    s = _rollup_stats([null_row, valid_row])
+    assert s.avg == pytest.approx(30.0)
+
+
+# ---------------------------------------------------------------------------
 # aggregate — all windows have data
 # ---------------------------------------------------------------------------
 
@@ -131,17 +194,21 @@ def test_aggregate_all_windows_ok() -> None:
     svc, _ = _make_svc()
     r_latest = _reading(_NOW - timedelta(minutes=5), temp=21.0)
     r_24h = _reading(_NOW - timedelta(hours=12), temp=23.0)
-    r_7d = _reading(_NOW - timedelta(days=3), temp=19.0)
+    r7d = _rollup(19.0, 18.0, 20.0, 12)
+
+    per_metric_7d = {
+        "temperature_c": [r7d],
+        "humidity_pct": [r7d],
+        "light_lux": [r7d],
+        "soil_moisture_pct": [r7d],
+    }
 
     async def _go():
         with (
             patch.object(svc.repo, "get_latest_per_metric", new=AsyncMock(return_value=_all_same(r_latest))),
-            patch.object(
-                svc.repo,
-                "get_readings_in_range",
-                new=AsyncMock(side_effect=[[r_24h], [r_7d]]),
-            ),
+            patch.object(svc.repo, "get_readings_in_range", new=AsyncMock(return_value=[r_24h])),
             patch.object(svc.repo, "upsert", new=AsyncMock()),
+            patch("app.services.snapshot_service.SensorRollupRepository", _rollup_cls(per_metric_7d)),
         ):
             return await svc.aggregate(_PLANT, now=_NOW)
 
@@ -168,6 +235,7 @@ def test_aggregate_missing_data_latest() -> None:
             patch.object(svc.repo, "get_latest_per_metric", new=AsyncMock(return_value=_all_none())),
             patch.object(svc.repo, "get_readings_in_range", new=AsyncMock(return_value=[])),
             patch.object(svc.repo, "upsert", new=AsyncMock()) as upsert_mock,
+            patch("app.services.snapshot_service.SensorRollupRepository", _rollup_cls()),
         ):
             summary = await svc.aggregate(_PLANT, now=_NOW)
             return summary, upsert_mock
@@ -188,6 +256,7 @@ def test_aggregate_missing_data_windows_not_persisted() -> None:
             patch.object(svc.repo, "get_latest_per_metric", new=AsyncMock(return_value=_all_none())),
             patch.object(svc.repo, "get_readings_in_range", new=AsyncMock(return_value=[])),
             patch.object(svc.repo, "upsert", new=AsyncMock()) as mock_upsert,
+            patch("app.services.snapshot_service.SensorRollupRepository", _rollup_cls()),
         ):
             await svc.aggregate(_PLANT, now=_NOW)
             return mock_upsert
@@ -204,12 +273,15 @@ def test_aggregate_missing_data_windows_not_persisted() -> None:
 def test_aggregate_upsert_called_for_data_windows() -> None:
     svc, _ = _make_svc()
     r = _reading(_NOW - timedelta(hours=1))
+    r7d = _rollup(22.0, 20.0, 25.0, 5)
+    per_metric_7d = {k: [r7d] for k in ("temperature_c", "humidity_pct", "light_lux", "soil_moisture_pct")}
 
     async def _go():
         with (
             patch.object(svc.repo, "get_latest_per_metric", new=AsyncMock(return_value=_all_same(r))),
-            patch.object(svc.repo, "get_readings_in_range", new=AsyncMock(side_effect=[[r], [r]])),
+            patch.object(svc.repo, "get_readings_in_range", new=AsyncMock(return_value=[r])),
             patch.object(svc.repo, "upsert", new=AsyncMock()) as mock_upsert,
+            patch("app.services.snapshot_service.SensorRollupRepository", _rollup_cls(per_metric_7d)),
         ):
             await svc.aggregate(_PLANT, now=_NOW)
             return mock_upsert
@@ -236,6 +308,7 @@ def test_24h_window_boundaries() -> None:
             patch.object(svc.repo, "get_latest_per_metric", new=AsyncMock(return_value=_all_none())),
             patch.object(svc.repo, "get_readings_in_range", new=AsyncMock(side_effect=_fake_range)),
             patch.object(svc.repo, "upsert", new=AsyncMock()),
+            patch("app.services.snapshot_service.SensorRollupRepository", _rollup_cls()),
         ):
             await svc.aggregate(_PLANT, now=_NOW)
 
@@ -246,23 +319,31 @@ def test_24h_window_boundaries() -> None:
 
 
 def test_7d_window_boundaries() -> None:
+    """7d window: rollup repo is called with start=now-7d, end=now for each metric."""
     svc, _ = _make_svc()
-    calls: list[tuple] = []
+    rollup_calls: list[tuple] = []
 
-    async def _fake_range(plant_id, start, end):
-        calls.append((start, end))
+    async def _fake_get_rollups(plant_id, metric_name, bucket, start, end):
+        rollup_calls.append((start, end))
         return []
+
+    mock_repo = MagicMock()
+    mock_repo.get_rollups_in_range = _fake_get_rollups
+    mock_cls = MagicMock(return_value=mock_repo)
 
     async def _go():
         with (
             patch.object(svc.repo, "get_latest_per_metric", new=AsyncMock(return_value=_all_none())),
-            patch.object(svc.repo, "get_readings_in_range", new=AsyncMock(side_effect=_fake_range)),
+            patch.object(svc.repo, "get_readings_in_range", new=AsyncMock(return_value=[])),
             patch.object(svc.repo, "upsert", new=AsyncMock()),
+            patch("app.services.snapshot_service.SensorRollupRepository", mock_cls),
         ):
             await svc.aggregate(_PLANT, now=_NOW)
 
     asyncio.run(_go())
-    start_7d, end_7d = calls[1]
+    # 4 metrics × 1 call each
+    assert len(rollup_calls) == 4
+    start_7d, end_7d = rollup_calls[0]
     assert end_7d == _NOW
     assert (_NOW - start_7d) == timedelta(days=7)
 
@@ -282,6 +363,7 @@ def test_latest_window_timestamps_equal_reading_timestamp() -> None:
             patch.object(svc.repo, "get_latest_per_metric", new=AsyncMock(return_value=_all_same(r))),
             patch.object(svc.repo, "get_readings_in_range", new=AsyncMock(return_value=[])),
             patch.object(svc.repo, "upsert", new=AsyncMock()),
+            patch("app.services.snapshot_service.SensorRollupRepository", _rollup_cls()),
         ):
             return await svc.aggregate(_PLANT, now=_NOW)
 
@@ -313,6 +395,7 @@ def test_returns_aggregation_summary_type() -> None:
             patch.object(svc.repo, "get_latest_per_metric", new=AsyncMock(return_value=_all_none())),
             patch.object(svc.repo, "get_readings_in_range", new=AsyncMock(return_value=[])),
             patch.object(svc.repo, "upsert", new=AsyncMock()),
+            patch("app.services.snapshot_service.SensorRollupRepository", _rollup_cls()),
         ):
             return await svc.aggregate(_PLANT, now=_NOW)
 
@@ -347,6 +430,7 @@ def test_latest_merges_two_partial_readings() -> None:
             patch.object(svc.repo, "get_latest_per_metric", new=AsyncMock(return_value=per_metric)),
             patch.object(svc.repo, "get_readings_in_range", new=AsyncMock(return_value=[])),
             patch.object(svc.repo, "upsert", new=AsyncMock()),
+            patch("app.services.snapshot_service.SensorRollupRepository", _rollup_cls()),
         ):
             return await svc.aggregate(_PLANT, now=_NOW)
 
@@ -379,6 +463,7 @@ def test_latest_one_device_partial_nulls_no_crash() -> None:
             patch.object(svc.repo, "get_latest_per_metric", new=AsyncMock(return_value=per_metric)),
             patch.object(svc.repo, "get_readings_in_range", new=AsyncMock(return_value=[])),
             patch.object(svc.repo, "upsert", new=AsyncMock()),
+            patch("app.services.snapshot_service.SensorRollupRepository", _rollup_cls()),
         ):
             return await svc.aggregate(_PLANT, now=_NOW)
 
@@ -402,12 +487,9 @@ def test_24h_aggregation_skips_null_per_metric() -> None:
     async def _go():
         with (
             patch.object(svc.repo, "get_latest_per_metric", new=AsyncMock(return_value=_all_none())),
-            patch.object(
-                svc.repo,
-                "get_readings_in_range",
-                new=AsyncMock(side_effect=[[r_soil_only, r_full], []]),
-            ),
+            patch.object(svc.repo, "get_readings_in_range", new=AsyncMock(return_value=[r_soil_only, r_full])),
             patch.object(svc.repo, "upsert", new=AsyncMock()),
+            patch("app.services.snapshot_service.SensorRollupRepository", _rollup_cls()),
         ):
             return await svc.aggregate(_PLANT, now=_NOW)
 
@@ -421,27 +503,50 @@ def test_24h_aggregation_skips_null_per_metric() -> None:
 
 
 def test_7d_aggregation_skips_null_per_metric() -> None:
-    """7d window: readings with None humidity are excluded from humidity stat."""
+    """7d window: rollup rows with None humidity are excluded from humidity stat."""
     svc, _ = _make_svc()
-    r_no_humi = _reading(_NOW - timedelta(days=1), humi=None, temp=20.0, light=500.0, soil=30.0)
-    r_full = _reading(_NOW - timedelta(days=2), humi=58.0, temp=21.0, light=600.0, soil=32.0)
+
+    # r_no_humi bucket: humidity=None, temp=20.0
+    # r_full bucket:   humidity=58.0, temp=21.0
+    # Humidity rollup: only one entry (from r_full) → avg=58.0
+    # Temperature rollup: two entries (count=1 each) → weighted avg=20.5
+    per_metric_7d = {
+        "temperature_c": [_rollup(20.0, 20.0, 20.0, 1), _rollup(21.0, 21.0, 21.0, 1)],
+        "humidity_pct": [_rollup(58.0, 58.0, 58.0, 1)],
+        "light_lux": [_rollup(500.0, 500.0, 500.0, 1), _rollup(600.0, 600.0, 600.0, 1)],
+        "soil_moisture_pct": [_rollup(30.0, 30.0, 30.0, 1), _rollup(32.0, 32.0, 32.0, 1)],
+    }
 
     async def _go():
         with (
             patch.object(svc.repo, "get_latest_per_metric", new=AsyncMock(return_value=_all_none())),
-            patch.object(
-                svc.repo,
-                "get_readings_in_range",
-                new=AsyncMock(side_effect=[[], [r_no_humi, r_full]]),
-            ),
+            patch.object(svc.repo, "get_readings_in_range", new=AsyncMock(return_value=[])),
             patch.object(svc.repo, "upsert", new=AsyncMock()),
+            patch("app.services.snapshot_service.SensorRollupRepository", _rollup_cls(per_metric_7d)),
         ):
             return await svc.aggregate(_PLANT, now=_NOW)
 
     summary = asyncio.run(_go())
     snap_7d = next(s for s in summary.snapshots if s.window == "7d")
     assert snap_7d.status == "ok"
-    # Only r_full has humidity → avg = 58.0
     assert snap_7d.humidity_pct.avg == pytest.approx(58.0)
-    # Both have temperature_c → avg = (20 + 21) / 2 = 20.5
-    assert snap_7d.temperature_c.avg == pytest.approx(20.5)
+    assert snap_7d.temperature_c.avg == pytest.approx(20.5)  # (20*1 + 21*1) / 2
+
+
+def test_7d_missing_rollups_returns_missing_data() -> None:
+    """If no rollups exist for 7d, the window status is missing_data."""
+    svc, _ = _make_svc()
+
+    async def _go():
+        with (
+            patch.object(svc.repo, "get_latest_per_metric", new=AsyncMock(return_value=_all_none())),
+            patch.object(svc.repo, "get_readings_in_range", new=AsyncMock(return_value=[])),
+            patch.object(svc.repo, "upsert", new=AsyncMock()),
+            patch("app.services.snapshot_service.SensorRollupRepository", _rollup_cls()),
+        ):
+            return await svc.aggregate(_PLANT, now=_NOW)
+
+    summary = asyncio.run(_go())
+    snap_7d = next(s for s in summary.snapshots if s.window == "7d")
+    assert snap_7d.status == "missing_data"
+    assert snap_7d.temperature_c.avg is None

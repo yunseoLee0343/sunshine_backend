@@ -201,6 +201,12 @@ async def test_repeated_aggregate_leaves_one_snapshot_row_per_window() -> None:
     r.light_lux = 600.0
     r.soil_moisture_pct = 40.0
 
+    rollup_row = MagicMock()
+    rollup_row.avg_value = 22.0
+    rollup_row.min_value = 20.0
+    rollup_row.max_value = 24.0
+    rollup_row.sample_count = 12
+
     mock_session = MagicMock()
     mock_session.execute = AsyncMock(return_value=MagicMock())
 
@@ -209,8 +215,16 @@ async def test_repeated_aggregate_leaves_one_snapshot_row_per_window() -> None:
     async def _fake_upsert(**kwargs):
         upsert_calls.append(kwargs)
 
+    async def _get_rollups(plant_id, metric_name, bucket, start, end):
+        return [rollup_row]
+
+    mock_rollup_repo = MagicMock()
+    mock_rollup_repo.get_rollups_in_range = _get_rollups
+    mock_rollup_cls = MagicMock(return_value=mock_rollup_repo)
+
     with (
         patch("app.services.snapshot_service.SnapshotRepository") as mock_repo_cls,
+        patch("app.services.snapshot_service.SensorRollupRepository", mock_rollup_cls),
     ):
         mock_repo = MagicMock()
         mock_repo.get_latest_per_metric = AsyncMock(

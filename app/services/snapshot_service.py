@@ -1,14 +1,14 @@
-"""SnapshotService — TICKET-007.
+"""SnapshotService — TICKET-007 / TICKET-068.
 
-Aggregates sensor_readings into environment_snapshots for three windows:
-  latest  — single most recent reading at or before `now`
-  24h     — readings in [now-24h, now]
-  7d      — readings in [now-7d, now]
+Aggregates sensor data into environment_snapshots for three windows:
+  latest  — metric-wise latest non-null reading (TICKET-066)
+  24h     — raw readings in [now-24h, now]
+  7d      — hourly rollups in [now-7d, now]  (TICKET-068)
 
 Rules:
   - No data in a window → status "missing_data", nothing persisted.
   - Data exists → compute avg/min/max, upsert, status "ok".
-  - Upsert key: (plant_id, window, window_start, window_end).
+  - Upsert key: (plant_id, window)  (TICKET-067).
   - No Rule Engine, no character updates, no LLM/RAG.
 """
 
@@ -20,6 +20,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.sensor_reading import SensorReading
+from app.repositories.sensor_rollup_repository import SensorRollupRepository
 from app.repositories.snapshot_repository import SnapshotRepository
 from app.schemas.environment_snapshots import (
     AggregationSummary,
@@ -30,6 +31,7 @@ from app.schemas.environment_snapshots import (
 
 _24H = timedelta(hours=24)
 _7D = timedelta(days=7)
+_METRIC_KEYS = ("temperature_c", "humidity_pct", "light_lux", "soil_moisture_pct")
 
 
 def _stats(readings: list[SensorReading], attr: str) -> MetricStats:
@@ -51,6 +53,24 @@ def _metric_stat(value: float | None) -> MetricStats:
     if value is None:
         return MetricStats(avg=None, min=None, max=None)
     return MetricStats(avg=value, min=value, max=value)
+
+
+def _rollup_stats(rollups: list) -> MetricStats:
+    """Weighted avg/min/max from a list of SensorMetricRollup rows."""
+    valid = [r for r in rollups if r.avg_value is not None]
+    if not valid:
+        return MetricStats(avg=None, min=None, max=None)
+    total_count = sum(r.sample_count for r in valid)
+    if total_count == 0:
+        return MetricStats(avg=None, min=None, max=None)
+    avg = sum(float(r.avg_value) * r.sample_count for r in valid) / total_count
+    mins = [float(r.min_value) for r in valid if r.min_value is not None]
+    maxs = [float(r.max_value) for r in valid if r.max_value is not None]
+    return MetricStats(
+        avg=avg,
+        min=min(mins) if mins else None,
+        max=max(maxs) if maxs else None,
+    )
 
 
 def _build_result(
@@ -77,6 +97,7 @@ def _build_result(
 
 class SnapshotService:
     def __init__(self, session: AsyncSession) -> None:
+        self.session = session
         self.repo = SnapshotRepository(session)
 
     async def aggregate(
@@ -127,7 +148,7 @@ class SnapshotService:
             result = _build_result(plant_id, "latest", now, now, [])
         results.append(result)
 
-        # --- 24h ---
+        # --- 24h: from raw sensor_readings ---
         start_24h = now - _24H
         rows_24h = await self.repo.get_readings_in_range(plant_id, start_24h, now)
         result_24h = _build_result(plant_id, "24h", start_24h, now, rows_24h)
@@ -135,12 +156,34 @@ class SnapshotService:
             await self._persist(result_24h, created_at)
         results.append(result_24h)
 
-        # --- 7d ---
+        # --- 7d: from sensor_metric_rollups (TICKET-068) ---
         start_7d = now - _7D
-        rows_7d = await self.repo.get_readings_in_range(plant_id, start_7d, now)
-        result_7d = _build_result(plant_id, "7d", start_7d, now, rows_7d)
-        if rows_7d:
+        rollup_repo = SensorRollupRepository(self.session)
+        metric_rollups = {}
+        for attr in _METRIC_KEYS:
+            metric_rollups[attr] = await rollup_repo.get_rollups_in_range(
+                plant_id, attr, "hourly", start_7d, now
+            )
+        any_7d = any(metric_rollups[attr] for attr in _METRIC_KEYS)
+        if any_7d:
+            total_7d_samples = sum(
+                r.sample_count for attr in _METRIC_KEYS for r in metric_rollups[attr]
+            )
+            result_7d = EnvironmentSnapshotResult(
+                plant_id=plant_id,
+                window="7d",
+                window_start=start_7d,
+                window_end=now,
+                status="ok",
+                sample_count=total_7d_samples,
+                temperature_c=_rollup_stats(metric_rollups["temperature_c"]),
+                humidity_pct=_rollup_stats(metric_rollups["humidity_pct"]),
+                light_lux=_rollup_stats(metric_rollups["light_lux"]),
+                soil_moisture_pct=_rollup_stats(metric_rollups["soil_moisture_pct"]),
+            )
             await self._persist(result_7d, created_at)
+        else:
+            result_7d = _build_result(plant_id, "7d", start_7d, now, [])
         results.append(result_7d)
 
         return AggregationSummary(
