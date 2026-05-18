@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-SQL_FILE="${1:-rag_knowledge_seed_20260513.sql}"
+SQL_FILE="${1:-docs/rag_knowledge_seed_20260513.sql}"
 
 if [[ ! -f "$SQL_FILE" ]]; then
   echo "ERROR: seed file not found: $SQL_FILE" >&2

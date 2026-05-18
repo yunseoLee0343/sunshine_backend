@@ -1,20 +1,26 @@
-"""ChatOrchestrator — TICKET-018 + TICKET-019 + TICKET-021 + TICKET-032.
+"""ChatOrchestrator — TICKET-018 + TICKET-019 + TICKET-021 + TICKET-032 + TICKET-065.
 
-Full pipeline (standard intents):
+Two-stage flow (TICKET-065):
   0.5 STT: audio_uri → transcript (TICKET-031)
   1.  Intent classification (ChatIntentClassifier)
   1.5 Vision analysis: image_uri → visual_facts (TICKET-030)
-  2.  Retrieval — try/except, optional; skipped when rag_layers is empty
-  3.  Evidence building (EvidenceBuilderService → ForwardContext)
-  4.  Prompt building (PromptBuilder)
-  5+6 LLM completion + self-healing validation (SelfHealingOrchestrator, TICKET-032)
+  1b. Companion branch (companion_plant_question — TICKET-021) — early return
+  2.  QuestionRouterService → fast path check (TICKET-065, skipped for audio)
+      2a. SQL/rule fast path (rule_only / sql_sensor / sql_care_log):
+          FastPathAnswerService → persist → return
+      2b. RAG fast path (rag_lookup / pest_reference):
+          RetrievalService → RagFastPathAnswerService; return if sufficient
+  3.  Retrieval — try/except, optional; skipped when rag_layers is empty
+  4.  Evidence building (EvidenceBuilderService → ForwardContext)
+  5.  Prompt building (PromptBuilder)
+  6+7 LLM completion + self-healing validation (SelfHealingOrchestrator, TICKET-032)
   6b. Pest guardrail (TICKET-019) — applied when intent == pest_reference_question
   6c. TTS: answer → audio_response (TICKET-031)
-  7.  Persist ChatRequest + LlmRun + LlmSelfHealingLog rows
+  8.  Persist ChatRequest + LlmRun + LlmSelfHealingLog rows
 
-Companion branch (companion_plant_question — TICKET-021):
-  Calls CompanionRecommendationService, formats result as 4-section answer,
-  persists with profile="companion_orchestrator"; skips steps 2-6b.
+Fast path persistence (TICKET-065):
+  model_name = "fast_path:<route>", profile = "fast_path_orchestrator",
+  tokens_in = 0, tokens_out = 0. No LlmSelfHealingLog created.
 
 Idempotent: a duplicate request_id returns the cached LlmRun result.
 No network calls at import time.
@@ -22,12 +28,15 @@ No network calls at import time.
 
 from __future__ import annotations
 
+import hashlib
+import logging
 import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.question_router import QuestionRouteDecision
 from app.domain.retrieval import RagLayer
 from app.llm.client_factory import get_llm_client
 from app.llm.mock_audio_client import MockAudioClient
@@ -42,6 +51,9 @@ from app.schemas.retrieval import RetrievalRequest
 from app.services.audio_port import AudioMetadata
 from app.services.chat_evaluation_service import ChatEvaluationService
 from app.services.chat_intent_classifier import ChatIntentClassifier
+from app.services.fast_path_answer_service import FastPathAnswerService
+from app.services.question_router_service import QuestionRouterService
+from app.services.rag_fast_path_answer_service import RagFastPathAnswerService
 from app.services.companion_recommendation_service import (
     CompanionRecommendationService,
     PlantOwnershipError,
@@ -80,6 +92,16 @@ _INTENT_TO_RAG_LAYERS: dict[str, list[RagLayer]] = {
 }
 
 _FALLBACK_RAG_LAYERS: list[RagLayer] = ["species_profile", "care_knowledge"]
+
+_log = logging.getLogger(__name__)
+_ROUTER = QuestionRouterService()
+_RAG_FP_SVC = RagFastPathAnswerService()
+_SQL_RULE_ROUTES: frozenset[str] = frozenset(["rule_only", "sql_sensor", "sql_care_log"])
+_RAG_FAST_ROUTES: frozenset[str] = frozenset(["rag_lookup", "pest_reference"])
+_RAG_ROUTE_TO_LAYERS: dict[str, list[RagLayer]] = {
+    "pest_reference": ["pest_disease_reference", "species_profile"],
+    "rag_lookup": ["species_profile", "care_knowledge"],
+}
 
 
 class ChatOrchestrator:
@@ -133,6 +155,29 @@ class ChatOrchestrator:
                 request_id=request_id,
                 now=now,
             )
+
+        # ---- fast path (TICKET-065) ----------------------------------------
+        if not audio_uri:
+            route_decision = _ROUTER.route(effective_question)
+            if route_decision.route in _SQL_RULE_ROUTES:
+                try:
+                    fp_svc = FastPathAnswerService(session)
+                    fp_answer = await fp_svc.answer(
+                        plant_id, user_id, effective_question, route_decision, now=now
+                    )
+                    return await self._persist_and_return_fast_path(
+                        session, request_id, plant_id, user_id, effective_question,
+                        route_decision.route, fp_answer, now,
+                    )
+                except Exception as exc:
+                    _log.warning("SQL/rule fast path failed (%s); falling back to LLM", exc)
+            elif route_decision.route in _RAG_FAST_ROUTES:
+                fp_rag_resp = await self._try_rag_fast_path(
+                    session, request_id, plant_id, user_id, effective_question,
+                    route_decision, now,
+                )
+                if fp_rag_resp is not None:
+                    return fp_rag_resp
 
         # ---- 2. retrieval (optional) ---------------------------------------
         rag_layers: list[RagLayer] = _INTENT_TO_RAG_LAYERS.get(intent, _FALLBACK_RAG_LAYERS)
@@ -345,18 +390,121 @@ class ChatOrchestrator:
             created_at=now,
         )
 
+    async def _persist_and_return_fast_path(
+        self,
+        session: AsyncSession,
+        request_id: uuid.UUID,
+        plant_id: uuid.UUID,
+        user_id: uuid.UUID,
+        question: str,
+        route: str,
+        answer: ParsedAnswer,
+        now: datetime,
+        *,
+        is_reference_only: bool = False,
+        diagnosis_allowed: bool = True,
+    ) -> ChatAnswerResponse:
+        prompt_hash = hashlib.sha256(f"{route}:{question}".encode()).hexdigest()[:16]
+        model_name = f"fast_path:{route}"
+        content = (
+            f"[결론] {answer.결론}\n\n[근거] {answer.근거}\n\n"
+            f"[행동] {answer.행동}\n\n[주의] {answer.주의}"
+        )
+
+        chat_row = ChatRequest(
+            id=request_id,
+            user_id=user_id,
+            plant_id=plant_id,
+            question=question,
+            status=route,
+            created_at=now,
+        )
+        session.add(chat_row)
+        await session.flush()
+
+        llm_run = LlmRun(
+            id=uuid.uuid4(),
+            request_id=request_id,
+            profile="fast_path_orchestrator",
+            model_name=model_name,
+            prompt_hash=prompt_hash,
+            prompt_text=question,
+            response_text=content,
+            tokens_in=0,
+            tokens_out=0,
+            latency_ms=0,
+            created_at=now,
+        )
+        session.add(llm_run)
+        await session.flush()
+
+        return ChatAnswerResponse(
+            request_id=request_id,
+            plant_id=plant_id,
+            intent=route,
+            answer=answer,
+            guardrails_applied=[],
+            prompt_hash=prompt_hash,
+            model_name=model_name,
+            input_tokens=0,
+            output_tokens=0,
+            from_cache=False,
+            is_reference_only=is_reference_only,
+            diagnosis_allowed=diagnosis_allowed,
+            created_at=now,
+        )
+
+    async def _try_rag_fast_path(
+        self,
+        session: AsyncSession,
+        request_id: uuid.UUID,
+        plant_id: uuid.UUID,
+        user_id: uuid.UUID,
+        question: str,
+        route_decision: QuestionRouteDecision,
+        now: datetime,
+    ) -> ChatAnswerResponse | None:
+        try:
+            rag_layers = _RAG_ROUTE_TO_LAYERS.get(
+                route_decision.route, _FALLBACK_RAG_LAYERS
+            )
+            retrieval_req = RetrievalRequest(
+                request_id=uuid.uuid4(),
+                user_id=user_id,
+                question=question,
+                species_profile_id=None,
+                rag_layers=rag_layers,
+                top_k=5,
+            )
+            retrieval_svc = RetrievalService(session)
+            retrieval_result = await retrieval_svc.query(retrieval_req)
+        except Exception as exc:
+            _log.warning("RAG fast path retrieval failed (%s); falling back to LLM", exc)
+            return None
+
+        fp_result = _RAG_FP_SVC.evaluate(question, route_decision, retrieval_result.results)
+        if not fp_result.is_sufficient:
+            return None
+
+        return await self._persist_and_return_fast_path(
+            session, request_id, plant_id, user_id, question,
+            route_decision.route, fp_result.answer, now,
+            is_reference_only=fp_result.is_reference_only,
+            diagnosis_allowed=fp_result.diagnosis_allowed,
+        )
+
     async def _load_cached(self, session: AsyncSession, chat_row: ChatRequest) -> ChatAnswerResponse:
         result = await session.execute(
             select(LlmRun)
             .where(
                 LlmRun.request_id == chat_row.id,
-                LlmRun.profile.in_(["chat_orchestrator", "companion_orchestrator"]),
+                LlmRun.profile.in_(["chat_orchestrator", "companion_orchestrator", "fast_path_orchestrator"]),
             )
             .limit(1)
         )
         llm_run = result.scalar_one_or_none()
 
-        is_pest = chat_row.status == _PEST_INTENT
+        is_pest = chat_row.status in (_PEST_INTENT, "pest_reference")
         is_reference_only = is_pest
         diagnosis_allowed = not is_pest
 
