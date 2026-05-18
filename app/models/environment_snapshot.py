@@ -10,7 +10,7 @@ from app.db.base import Base
 
 class EnvironmentSnapshot(Base):
     __tablename__ = "environment_snapshots"
-    __table_args__ = (UniqueConstraint("plant_id", "window", "window_start", "window_end"),)
+    __table_args__ = (UniqueConstraint("plant_id", "window", name="uq_environment_snapshots_plant_window"),)
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     plant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("plants.id"), nullable=False)

@@ -132,7 +132,7 @@ class SnapshotRepository:
             pg_insert(EnvironmentSnapshot)
             .values(**values)
             .on_conflict_do_update(
-                index_elements=["plant_id", "window", "window_start", "window_end"],
+                index_elements=["plant_id", "window"],
                 set_=update_cols,
             )
         )
