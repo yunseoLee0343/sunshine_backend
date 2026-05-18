@@ -37,6 +37,7 @@ from app.services.plant_onboarding import PlantOnboardingService
 from app.services.species_candidate_service import SpeciesCandidateService
 from app.vision.mock_species_classifier import MockSpeciesClassifier
 from app.vision.plant_id_species_classifier import PlantIdSpeciesClassifier
+from app.vision.qwen_vl_species_classifier import QwenVLSpeciesClassifier
 from app.vision.species_classifier import SpeciesClassifierPort
 
 router = APIRouter(prefix="/plants", tags=["plants"])
@@ -47,9 +48,10 @@ _character_engine = CharacterStateEngine()
 # Lightweight, stateless mock — instantiated once at import time.
 _mock_classifier = MockSpeciesClassifier()
 
-# Plant.id classifier is lazily instantiated on first use so that secrets
-# and HTTP clients are never touched at import time.
+# Plant.id and Qwen-VL classifiers are lazily instantiated on first use so
+# that secrets and HTTP clients are never touched at import time.
 _plant_id_classifier: PlantIdSpeciesClassifier | None = None
+_qwen_vl_classifier: QwenVLSpeciesClassifier | None = None
 
 _orchestrator = ChatOrchestrator()
 
@@ -63,20 +65,29 @@ async def get_session():
 def get_species_classifier() -> SpeciesClassifierPort:
     """FastAPI dependency: returns the classifier selected by SPECIES_CLASSIFIER_PROVIDER.
 
-    Supported values: 'mock' (default), 'plant_id'.
+    Supported values: 'catalog_mock' (default), 'mock' (alias), 'plant_id', 'qwen_vl'.
     Override this in tests to inject a fake classifier.
     """
-    global _plant_id_classifier
+    global _plant_id_classifier, _qwen_vl_classifier
 
     provider = settings.SPECIES_CLASSIFIER_PROVIDER
 
-    if provider == "mock":
+    if provider in ("catalog_mock", "mock"):
         return _mock_classifier
 
     if provider == "plant_id":
         if _plant_id_classifier is None:
             _plant_id_classifier = PlantIdSpeciesClassifier()
         return _plant_id_classifier
+
+    if provider == "qwen_vl":
+        if _qwen_vl_classifier is None:
+            _qwen_vl_classifier = QwenVLSpeciesClassifier(
+                base_url=settings.QWEN_VL_BASE_URL,
+                model=settings.QWEN_VL_MODEL,
+                timeout_seconds=settings.QWEN_VL_TIMEOUT_SECONDS,
+            )
+        return _qwen_vl_classifier
 
     raise RuntimeError(f"unsupported species classifier provider: {provider!r}")
 

@@ -249,6 +249,17 @@
   font-style: italic;
 }
 
+.catalogMatched {
+  font-size: 0.72rem;
+  color: #2d6a4f;
+  font-weight: 600;
+}
+
+.catalogUnmatched {
+  font-size: 0.72rem;
+  color: #adb5bd;
+}
+
 /* ── Step 3: Profile form ── */
 .form {
   display: flex;

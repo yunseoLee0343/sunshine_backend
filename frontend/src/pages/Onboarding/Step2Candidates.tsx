@@ -34,6 +34,9 @@ export default function Step2Candidates({ candidates, selected, onSelect }: Prop
             selected.species_profile_id === c.species_profile_id &&
             selected.label_ko === c.label_ko
 
+          // Prefer catalog-resolved name over raw classifier label
+          const displayName = c.display_name ?? c.label_ko
+
           return (
             <button
               key={c.species_profile_id ?? `${c.label_en}-${i}`}
@@ -44,13 +47,18 @@ export default function Step2Candidates({ candidates, selected, onSelect }: Prop
               aria-pressed={isRegisterable ? isSelected : undefined}
             >
               <div className={styles.candidateInfo}>
-                <span className={styles.candidateName}>{c.label_ko}</span>
+                <span className={styles.candidateName}>{displayName}</span>
                 {c.scientific_name && (
                   <span className={styles.candidateScientific}>{c.scientific_name}</span>
                 )}
+                <span className={c.catalog_matched ? styles.catalogMatched : styles.catalogUnmatched}>
+                  {c.catalog_matched ? '카탈로그 일치' : '미일치'}
+                  {c.source && ` · ${c.source}`}
+                  {c.match_reason && ` · ${c.match_reason}`}
+                </span>
                 {!isRegisterable && (
                   <span className={styles.candidateUnavailable}>
-                    아직 등록할 수 없는 후보예요. 몬스테라·스킨답서스·필로덴드론 중 하나를 선택해 주세요.
+                    카탈로그에 등록되지 않은 후보입니다. 다른 후보를 선택해 주세요.
                   </span>
                 )}
               </div>
