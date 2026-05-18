@@ -343,9 +343,20 @@
   margin-bottom: 1.5rem;
 }
 
-.successEmoji {
-  font-size: 3.5rem;
-  margin-bottom: 0.75rem;
+.successImageWrap {
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 0.75rem;
+}
+
+.successPlantImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+  border: 3px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .successName {

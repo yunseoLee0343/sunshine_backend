@@ -21,9 +21,35 @@
 .characterStressed { background: #fff3cd; }
 .characterNeutral  { background: #f0f0f0; }
 
-.characterEmoji {
-  font-size: 4rem;
+.characterImageWrap {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+}
+
+.characterImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+.characterMoodBadge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  font-size: 1.1rem;
   line-height: 1;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.06);
 }
 
 .characterName {

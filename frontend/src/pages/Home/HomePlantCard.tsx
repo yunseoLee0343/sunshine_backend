@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { PlantHomeCard } from '../../api/types'
+import { getPlantImageUrl } from '../../utils/plantImage'
 import styles from './Home.module.css'
 
 // ---------------------------------------------------------------------------
@@ -81,6 +82,7 @@ export default function HomePlantCard({ plant }: Props) {
   const mood = plant.character.mood
   const emoji = MOOD_EMOJI[mood] ?? '🌿'
   const avatarCls = MOOD_AVATAR_CLASS[mood] ?? styles.avatarNeutral
+  const imageUrl = getPlantImageUrl({ speciesName: plant.species_name })
 
   const careLabelText = CARE_LABEL[plant.care_status] ?? plant.care_status
   const careCls = CARE_CLASS[plant.care_status] ?? styles.careInsufficient
@@ -98,8 +100,13 @@ export default function HomePlantCard({ plant }: Props) {
   return (
     <Link to={`/plants/${plant.plant_id}`} className={styles.card}>
       <div className={styles.cardTop}>
-        <div className={`${styles.avatar} ${avatarCls}`} aria-hidden="true">
-          {emoji}
+        <div className={`${styles.avatar} ${avatarCls}`}>
+          <img
+            src={imageUrl}
+            alt={plant.species_name ?? plant.nickname}
+            className={styles.plantImage}
+          />
+          <span className={styles.moodBadge} aria-hidden="true">{emoji}</span>
         </div>
         <div className={styles.cardInfo}>
           <div className={styles.cardName}>{plant.nickname}</div>

@@ -1,4 +1,5 @@
 import type { PlantCard } from '../../api/types'
+import { getPlantImageUrl } from '../../utils/plantImage'
 import styles from './PlantDetail.module.css'
 
 const MOOD_EMOJI: Record<string, string> = {
@@ -29,10 +30,21 @@ export default function CharacterRenderer({ plant }: Props) {
   const speciesName = plant.species?.korean_name ?? null
   const room = plant.room_name ?? null
   const metaParts = [speciesName, room].filter(Boolean)
+  const imageUrl = getPlantImageUrl({
+    scientificName: plant.species?.scientific_name,
+    koreanName: plant.species?.korean_name,
+  })
 
   return (
     <div className={`${styles.characterCard} ${bgCls}`}>
-      <div className={styles.characterEmoji} aria-hidden="true">{emoji}</div>
+      <div className={styles.characterImageWrap}>
+        <img
+          src={imageUrl}
+          alt={speciesName ?? plant.nickname}
+          className={styles.characterImage}
+        />
+        <span className={styles.characterMoodBadge} aria-hidden="true">{emoji}</span>
+      </div>
       <div className={styles.characterName}>{plant.nickname}</div>
       {metaParts.length > 0 && (
         <div className={styles.characterSpecies}>{metaParts.join(' · ')}</div>
