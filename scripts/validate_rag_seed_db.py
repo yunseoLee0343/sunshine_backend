@@ -1,4 +1,4 @@
-"""validate_rag_seed_db.py — TICKET-047.
+"""validate_rag_seed_db.py — TICKET-047 / TICKET-061.
 
 Post-import DB validation. Executes read-only SQL checks against the live DB.
 All queries are SELECT only — no INSERT, UPDATE, or DELETE.
@@ -18,6 +18,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 EXPECTED_MODEL_NAME = "Qwen/Qwen3-Embedding-0.6B"
 EXPECTED_VECTOR_DIM = 1024
+EXPECTED_ENTRY_COUNT = 121
+EXPECTED_CHUNK_DOC_COUNT = 726
+EXPECTED_CHUNK_EMB_COUNT = 726
+EXPECTED_CHUNKS_PER_KIND = 121
 
 ALLOWED_CHUNK_KINDS = frozenset(
     [
@@ -52,12 +56,24 @@ async def run_validation(session: AsyncSession) -> ValidationReport:
 
     row = await session.execute(text("SELECT COUNT(*) FROM plant_knowledge_entries"))
     report.entry_count = row.scalar_one()
+    if report.entry_count != EXPECTED_ENTRY_COUNT:
+        report.errors.append(
+            f"plant_knowledge_entries: expected {EXPECTED_ENTRY_COUNT}, got {report.entry_count}"
+        )
 
     row = await session.execute(text("SELECT COUNT(*) FROM plant_chunk_documents"))
     report.chunk_document_count = row.scalar_one()
+    if report.chunk_document_count != EXPECTED_CHUNK_DOC_COUNT:
+        report.errors.append(
+            f"plant_chunk_documents: expected {EXPECTED_CHUNK_DOC_COUNT}, got {report.chunk_document_count}"
+        )
 
     row = await session.execute(text("SELECT COUNT(*) FROM plant_chunk_embeddings"))
     report.chunk_embedding_count = row.scalar_one()
+    if report.chunk_embedding_count != EXPECTED_CHUNK_EMB_COUNT:
+        report.errors.append(
+            f"plant_chunk_embeddings: expected {EXPECTED_CHUNK_EMB_COUNT}, got {report.chunk_embedding_count}"
+        )
 
     row = await session.execute(
         text("SELECT COUNT(*) FROM plant_chunk_embeddings WHERE vector_dim <> :dim"),
@@ -80,6 +96,10 @@ async def run_validation(session: AsyncSession) -> ValidationReport:
         report.chunk_kind_distribution[kind] = int(cnt)
         if kind not in ALLOWED_CHUNK_KINDS:
             report.errors.append(f"Unexpected chunk_kind in DB: '{kind}'")
+        elif int(cnt) != EXPECTED_CHUNKS_PER_KIND:
+            report.errors.append(
+                f"chunk_kind '{kind}': expected {EXPECTED_CHUNKS_PER_KIND} rows, got {cnt}"
+            )
 
     rows = await session.execute(
         text(

@@ -108,7 +108,7 @@ def validate_file(path: Path) -> None:
 
 
 def main() -> None:
-    sql_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("rag_knowledge_seed_20260513.sql")
+    sql_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("docs/rag_knowledge_seed_20260513.sql")
 
     if not sql_path.exists():
         print(f"ERROR: file not found: {sql_path}", file=sys.stderr)
